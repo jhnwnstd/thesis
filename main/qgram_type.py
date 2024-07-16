@@ -7,16 +7,16 @@ from evaluation_class import EvaluateModel
 
 @dataclass
 class Config:
-    """Configuration class for setting up directories and default parameters."""
+    """Configuration class for setting up directories and testing parameters."""
     base_dir: Path = field(default_factory=lambda: Path(__file__).parent)
     seed: int = 42
     q_range: List[int] = field(default_factory=lambda: [7, 7])
-    split_config: float = 0.5
-    vowel_replacement_ratio: float = 0.2
-    consonant_replacement_ratio: float = 0.8
-    min_word_length: int = 3
-    prediction_method_name: str = 'context_sensitive'
-    num_replacements: int = 1
+    split_config: float = 0.5 # train-test split ratio
+    vowel_replacement_ratio: float = 0.2 # must sum to 1 with consonant_replacement_ratio
+    consonant_replacement_ratio: float = 0.8 # must sum to 1 with vowel_replacement_ratio
+    min_word_length: int = 3 # minimum word length for evaluation
+    prediction_method_name: str = 'context_sensitive' # method to use for prediction
+    num_replacements: int = 1 # number of replacements to make in the context_sensitive method
     log_level: int = logging.INFO
 
     def __post_init__(self):
