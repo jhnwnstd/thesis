@@ -20,7 +20,7 @@ class EvaluateModel:
             split_type: Type of data split (e.g., 'random', 'chronological'), if applicable.
             log_initialization_details: Whether to log initialization details.
         """
-        # Store corpus manager and extract relevant attributes
+        # Store corpus manager and extract relevant attributes for easy access
         self.corpus_manager = corpus_manager
         self.corpus_name = corpus_manager.corpus_name
         self.config = corpus_manager.config
@@ -31,19 +31,19 @@ class EvaluateModel:
         self.all_words = corpus_manager.all_words
         self.split_type = split_type
 
-        # Extract and count unique characters from the corpus
+        # Extract unique characters from the corpus for character-level analysis
         unique_characters = corpus_manager.extract_unique_characters()
         self.unique_character_count = len(unique_characters)
 
-        # Initialize prediction class with model and character set
+        # Initialize prediction class with model, q-gram range, and character set
         self.q_range = range(self.config.q_range[0], self.config.q_range[1] + 1)
         self.predictor = Predictions(self.model, self.q_range, unique_characters)
 
-        # Log initialization details if requested
+        # Log initialization details if requested, useful for experiment tracking
         if log_initialization_details:
             self.log_initialization_details()
 
-        # Set up the prediction method to be used
+        # Set up the prediction method to be used based on configuration
         self.prediction_method = self.get_prediction_method()
 
     def get_prediction_method(self):
@@ -53,12 +53,13 @@ class EvaluateModel:
         Returns:
             A function representing the selected prediction method.
         """
+        # Dictionary mapping prediction method names to their corresponding functions
         prediction_methods = {
             'context_sensitive': self.predictor.context_sensitive,
             'context_no_boundary': self.predictor.context_no_boundary,
             'base_prediction': self.predictor.base_prediction
         }
-        # Default to context_sensitive if method not found
+        # Default to context_sensitive if specified method not found
         return prediction_methods.get(self.config.prediction_method_name, self.predictor.context_sensitive)
 
     def log_initialization_details(self):
@@ -66,6 +67,7 @@ class EvaluateModel:
         Log important details about the model initialization and configuration.
         This aids in experiment tracking and reproducibility.
         """
+        # Log various configuration parameters and dataset statistics
         logging.info(f'Language Model for {self.corpus_name} initialized with:')
         logging.info(f'Seed: {self.config.seed}')
         logging.info(f'Q-gram Range: {self.config.q_range}')
@@ -93,12 +95,12 @@ class EvaluateModel:
         total_test_words = len(self.test_set)
 
         for modified_word, missing_letters, _, all_predictions, _ in predictions:
-            # Validate prediction format
+            # Validate prediction format to ensure consistency
             if not all(isinstance(pred, tuple) and len(pred) == 2 for pred in all_predictions):
                 logging.error(f'Invalid prediction format: {all_predictions}')
                 continue
 
-            # Check accuracy: find the rank of the first correct prediction
+            # Find the rank of the first correct prediction (accuracy)
             correct_rank = next((rank for rank, (predicted_letter, _) in enumerate(all_predictions, start=1)
                                 if predicted_letter in missing_letters), None)
 
@@ -119,7 +121,7 @@ class EvaluateModel:
                                 validity_counts[i] += 1
                                 valid_word_checked[i-1] = True
 
-        # Calculate final metrics as percentages
+        # Calculate final metrics as percentages for easy interpretation
         total_accuracy = {k: accuracy_counts[k] / total_test_words for k in accuracy_counts}
         total_validity = {k: validity_counts[k] / total_test_words for k in validity_counts}
 
@@ -139,24 +141,24 @@ class EvaluateModel:
 
         for modified_word, target_letters, original_word in self.test_set:
             try:
-                # Get predictions for the modified word
+                # Get predictions for the modified word using the specified method
                 all_predictions = prediction_method(modified_word)
                 
-                # Validate prediction format
+                # Validate prediction format to ensure consistency
                 if not isinstance(all_predictions, list) or not all(isinstance(pred, tuple) and len(pred) == 2 for pred in all_predictions):
                     logging.error(f'Unexpected prediction format for {modified_word}: {all_predictions}')
                     continue
 
-                # Find the rank of the correct prediction
+                # Find the rank of the correct prediction (if any)
                 correct_letter_rank = next((rank for rank, (retrieved_letter, _) in enumerate(all_predictions, start=1)
                                             if retrieved_letter in target_letters), None)
 
-                # Store prediction details
+                # Store prediction details for later analysis
                 predictions.append((modified_word, target_letters, original_word, all_predictions[:3], correct_letter_rank))
             except Exception as e:
                 logging.error(f"Error predicting for {modified_word}: {e}", exc_info=True)
 
-        # Compute overall metrics
+        # Compute overall metrics based on all predictions
         evaluation_metrics = self.compute_metrics(predictions)
         return evaluation_metrics, predictions
 
@@ -172,11 +174,11 @@ class EvaluateModel:
         output_file_path = self.config.text_dir / f'{self.corpus_name}_predictions.txt'
         try:
             with output_file_path.open('w', encoding='utf-8') as file:
-                # Write general information
+                # Write general information about the evaluation
                 file.write(f'Prediction Method: {prediction_method_name}\n')
                 file.write(f'Unique Character Count: {self.unique_character_count}\n\n')
 
-                # Write accuracy and validity metrics
+                # Write accuracy and validity metrics for easy reference
                 accuracy = evaluation_metrics['accuracy']
                 validity = evaluation_metrics['validity']
                 for i in range(1, 4):
@@ -184,7 +186,7 @@ class EvaluateModel:
                     file.write(f'TOP{i} VALIDITY: {validity[i]:.2%}\n')
                 file.write('\n')
 
-                # Write dataset information
+                # Write dataset information for context
                 file.write(f'Train Size: {len(self.train_set)}, Test Size: {len(self.test_set)}\n')
                 file.write(f'Vowel Ratio: {self.config.vowel_replacement_ratio}, '
                            f'Consonant Ratio: {self.config.consonant_replacement_ratio}\n\n')
@@ -207,13 +209,13 @@ class EvaluateModel:
 
     def export_prediction_details_to_csv(self, predictions, prediction_method_name):
         """
-        Export detailed prediction results to a CSV file.
+        Export detailed prediction results to a CSV file for further analysis.
         
         Args:
             predictions: List of detailed prediction results.
             prediction_method_name: Name of the prediction method used.
         """
-        # Construct CSV file path with relevant details
+        # Construct CSV file path with relevant details for easy identification
         split_type_str = f"_{self.split_type}" if self.split_type else ""
         csv_file_path = self.config.csv_dir / (
             f'{self.corpus_name}_{prediction_method_name}{split_type_str}_split'
@@ -224,7 +226,7 @@ class EvaluateModel:
             with csv_file_path.open('w', newline='', encoding='utf-8') as file:
                 writer = csv.writer(file)
 
-                # Write CSV header
+                # Write CSV header with detailed column descriptions
                 writer.writerow([
                     'Tested_Word', 'Original_Word', 'Correct_Letter(s)', 
                     'Top1_Predicted_Letter', 'Top1_Confidence', 'Top1_Is_Valid', 'Top1_Is_Accurate',
@@ -233,7 +235,7 @@ class EvaluateModel:
                     'Correct_Letter_Rank', 'In_Training_Set'
                 ])
 
-                # Create a set of training words for quick lookup
+                # Create a set of training words for quick lookup during validation
                 training_words_set = set(self.train_set)
                 
                 # Write prediction details for each test word
