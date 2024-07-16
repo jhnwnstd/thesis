@@ -156,3 +156,6 @@ cython_debug/
 
 # Text files
 *.txt
+
+# Output files
+outputs/
