@@ -164,14 +164,22 @@ This project uses `pip` for package management. To update dependencies:
 
 ```
 thesis/
+├── csv_processing/
 ├── main/
-│   ├── data/
-│   │   ├── corpora/
-│   │   └── ...
-│   ├── scripts/
-│   └── ...
+│ ├── data/
+│ │ ├── corpora/
+│ │ ├── logs/
+│ │ ├── models/
+│ │ └── outputs/
+│ ├── corpus_class.py
+│ ├── evaluation_class.py
+│ ├── predictions_class.py
+│ ├── qgram_analysis.py
+│ ├── qgram_token.py
+│ └── qgram_type.py
 ├── .gitattributes
 ├── .gitignore
+├── LICENSE
 ├── README.md
 └── requirements.txt
 ```
