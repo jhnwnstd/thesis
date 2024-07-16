@@ -1,12 +1,12 @@
 # Thesis Project
 
-Welcome to the repository for my thesis project. This repository contains all the code and works related to my thesis. Below, you'll find detailed instructions on how to set up and use this repository, including handling large files and managing dependencies.
+This repository contains all the code and resources related to my thesis. Below, you'll find detailed instructions on how to set up and use this repository, including handling large files and managing dependencies.
 
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
-- [KenLM Dependency](#kenlm-dependency)
 - [Installation](#installation)
+- [KenLM Dependency](#kenlm-dependency)
 - [Usage](#usage)
 - [Large Files](#large-files)
 - [Managing Dependencies](#managing-dependencies)
@@ -16,35 +16,11 @@ Welcome to the repository for my thesis project. This repository contains all th
 
 ## Prerequisites
 
-Before you begin, ensure you have met the following requirements:
+Ensure you have the following installed:
 
-- [Git](https://git-scm.com/)
-- [Python 3.x](https://www.python.org/)
-- [Git Large File Storage (LFS)](https://git-lfs.github.com/)
-
-## KenLM Dependency
-
-This project requires KenLM, a faster and smaller language model query library. Follow these steps to set up KenLM:
-
-1. Visit the [official KenLM website](https://kheafield.com/code/kenlm/) for detailed information.
-
-2. Clone the KenLM repository:
-   ```bash
-   git clone https://github.com/kpu/kenlm.git
-   cd kenlm
-   ```
-
-3. Build KenLM:
-   ```bash
-   mkdir -p build
-   cd build
-   cmake ..
-   make -j 4
-   ```
-
-4. Add KenLM to your system PATH or update your project's configuration to point to the KenLM installation directory.
-
-For more detailed instructions and advanced configuration options, please take a look at the [KenLM GitHub repository](https://github.com/kpu/kenlm).
+- [Git](https://git-scm.com/) (2.25.0 or newer)
+- [Python](https://www.python.org/) (3.8 or newer)
+- [Git Large File Storage (LFS)](https://git-lfs.github.com/) (2.13.0 or newer)
 
 ## Installation
 
@@ -60,38 +36,87 @@ For more detailed instructions and advanced configuration options, please take a
    git lfs track "main/data/corpora/*.txt"
    ```
 
-## Usage
-
-### Running the Code
-
-1. Create and activate a virtual environment:
+3. Create and activate a virtual environment:
    ```bash
    python3 -m venv venv
-   source venv/bin/activate
+   source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
    ```
 
-2. Install required packages:
+4. Install required packages:
    ```bash
    pip install -r requirements.txt
    ```
 
-3. Run your scripts:
+## KenLM Dependency
+
+This project requires KenLM, a faster and smaller language model query library developed by Kenneth Heafield. To set up KenLM:
+
+1. Clone the KenLM repository:
    ```bash
-   python path/to/your_script.py
+   git clone https://github.com/kpu/kenlm.git
+   cd kenlm
    ```
+
+2. Create a build directory and compile:
+   ```bash
+   mkdir -p build
+   cd build
+   cmake ..
+   make -j 4
+   ```
+
+3. To use KenLM as a Python module:
+   ```bash
+   pip install https://github.com/kpu/kenlm/archive/master.zip
+   ```
+   Note: When installing via pip, you can set the `MAX_ORDER` environment variable to control the max order with which KenLM is built.
+
+4. Add the KenLM `build` directory to your system PATH or update your project's configuration to point to the KenLM installation directory.
+
+### Additional Notes:
+
+- KenLM supports reading ARPA files in compressed formats if compiled with the appropriate options:
+  - HAVE_ZLIB: Supports gzip (link with -lz)
+  - HAVE_BZLIB: Supports bzip2 (link with -lbz2)
+  - HAVE_XZLIB: Supports xz (link with -llzma)
+
+- KenLM offers two main data structures for querying: probing (fastest, uses most memory) and trie (least memory, slightly slower).
+
+- For large-scale applications, you can create a binary format for faster loading:
+  ```bash
+  ./build_binary input.arpa output.binary
+  ```
+
+- KenLM has been tested on various platforms including x86_64, x86, PPC64, and ARM, and runs on Linux, OS X, Cygwin, and MinGW.
+
+For more detailed information on usage, estimation, filtering, and benchmarks, refer to the [KenLM GitHub repository](https://github.com/kpu/kenlm) and the [official KenLM website](https://kheafield.com/code/kenlm/).
+
+## Usage
+
+To run your scripts:
+
+```bash
+python path/to/your_script.py
+```
+
+Replace `path/to/your_script.py` with the actual path to the script you want to run.
 
 ## Large Files
 
-This repository uses Git LFS to handle large files. The following file types are excluded using `.gitignore`:
+This repository uses Git LFS to handle large files. The following file types are tracked by Git LFS:
+
+- Text files in the corpora directory (`main/data/corpora/*.txt`)
+
+The following file types are excluded using `.gitignore`:
 
 - KenLM models (`*.klm`)
 - ARPA files (`*.arpa`)
 - PNG files (`*.png`)
 - CSV files (`*.csv`)
 
-### Removing Large Files
+### Removing Large Files from History
 
-To remove large files from the repository history:
+If you need to remove large files from the repository history:
 
 1. Install `git-filter-repo`:
    ```bash
@@ -105,14 +130,10 @@ To remove large files from the repository history:
 
 ## Managing Dependencies
 
-This project uses `pyenv` and `pip` to manage Python environments and dependencies.
+This project uses `pip` for package management. To update dependencies:
 
-1. Activate your `pyenv` environment:
-   ```bash
-   pyenv activate your-environment
-   ```
-
-2. Install dependencies:
+1. Ensure your virtual environment is activated.
+2. Update dependencies:
    ```bash
    pip install -r requirements.txt
    ```
@@ -133,12 +154,6 @@ thesis/
 └── requirements.txt
 ```
 
-## Contributing
+## License
 
-We welcome contributions! Please follow these steps:
-
-1. Fork the repository
-2. Create a new branch (`git checkout -b feature-branch`)
-3. Make your changes and commit them (`git commit -am 'Add new feature'`)
-4. Push to the branch (`git push origin feature-branch`)
-5. Create a new Pull Request
+This project is licensed under the [MIT License](https://opensource.org/licenses/MIT). See the [LICENSE](LICENSE) file for details.
