@@ -56,7 +56,7 @@ def clean_dataset(file_path):
     except Exception as e:
         logging.error(f"Failed to clean {file_path.name} due to {e}")
 
-data_dir = Path('data/outputs/csv')
+data_dir = Path('main/data/outputs/csv')
 
 files_to_clean = [file_path for file_path in data_dir.glob('*.csv') if 'f1' not in file_path.stem]
 
