@@ -162,6 +162,8 @@ This project uses `pip` for package management. To update dependencies:
 
 ## Project Structure
 
+## Project Structure
+
 ```
 thesis/
 ├── csv_processing/
@@ -183,6 +185,15 @@ thesis/
 ├── README.md
 └── requirements.txt
 ```
+
+### Main Directory Scripts
+
+- `corpus_class.py`: Defines the Corpus class for handling text data.
+- `evaluation_class.py`: Contains the Evaluation class for assessing model performance.
+- `predictions_class.py`: Implements the Predictions class for making and managing predictions.
+- `qgram_analysis.py`: Provides utility functions for q-gram analysis.
+- `qgram_token.py`: Performs q-gram analysis on all words (tokens) in the corpus.
+- `qgram_type.py`: Performs q-gram analysis on unique word types in the corpus.
 
 ## License
 
