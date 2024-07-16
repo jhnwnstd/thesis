@@ -441,7 +441,7 @@ def main():
     config = Config()
     config.setup_logging()
     config.create_directories()
-    corpora = ['cmudict', 'brown', 'CLMET3_all_tokens.txt', 'all_tokens_lampeter.txt', 
+    corpora = ['cmudict', 'brown', 'all_tokens_clmet.txt', 'all_tokens_lampeter.txt', 
                'all_tokens_openEdges.txt']
     split_types = ['A', 'B', 'HAPAX']
     for corpus_name in corpora:

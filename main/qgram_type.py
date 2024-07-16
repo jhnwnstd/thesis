@@ -98,7 +98,7 @@ def main():
     config.setup_logging()
 
     # Iterating over each corpus for processing
-    corpora = ['cmudict', 'brown', 'CLMET3.txt', 'sorted_tokens_lampeter.txt', 'sorted_tokens_openEdges.txt']
+    corpora = ['cmudict', 'brown', 'sorted_tokens_clmet.txt', 'sorted_tokens_lampeter.txt', 'sorted_tokens_openEdges.txt']
     for corpus_name in corpora:
         run(corpus_name, config)
 
