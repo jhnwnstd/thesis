@@ -18,7 +18,7 @@ class Letters(Enum):
     Provides methods to check if a character is a vowel or consonant.
     """
     VOWELS = 'aeèéiîouyæœ'
-    CONSONANTS = 'bcdfghjklmnpqrstvwxz'
+    CONSONANTS = 'bcdfghjklmnpqrstvwxzȝ'
 
     @staticmethod
     def is_vowel(char):
