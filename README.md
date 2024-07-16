@@ -93,13 +93,35 @@ For more detailed information on usage, estimation, filtering, and benchmarks, r
 
 ## Usage
 
-To run your scripts:
+The main scripts for this project are located in the `main` directory. There are two primary scripts you can run:
+
+1. `qgram_type.py` (Main script):
+   This script runs the analysis on word types.
+
+2. `qgram_token.py`:
+   This script is similar to `qgram_type.py` but runs the analysis on all words (tokens) instead of just word types.
+
+To run the main script:
 
 ```bash
-python path/to/your_script.py
+python main/qgram_type.py
 ```
 
-Replace `path/to/your_script.py` with the actual path to the script you want to run.
+To run the token-based analysis:
+
+```bash
+python main/qgram_token.py
+```
+
+Make sure you are in the root directory of the project when running these commands.
+
+### Notes:
+- `qgram_type.py` is the primary script for this project and should be used for most analyses.
+- Use `qgram_token.py` when you need to analyze all word occurrences rather than just unique word types.
+- Ensure that all necessary data files and dependencies are in place before running the scripts.
+- You may need to adjust parameters or input files within the scripts depending on your specific analysis needs.
+
+If you encounter any issues or need to modify the analysis, refer to the comments within each script for guidance on customization and troubleshooting.
 
 ## Large Files
 
