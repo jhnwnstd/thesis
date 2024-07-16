@@ -85,27 +85,86 @@ The main scripts for this project are located in the `main` directory. There are
 2. `qgram_token.py`:
    This script is similar to `qgram_type.py` but runs the analysis on all words (tokens) instead of just word types.
 
-To run the main script:
+### Running Experiments with qgram_type.py
+
+The `qgram_type.py` script is the main script for running q-gram analysis on word types. You can modify various parameters in the `Config` class to run different experiments.
+
+#### Changing Configuration Values
+
+To run experiments with different settings, modify the following values in the `_set_values` method of the `Config` class:
+
+1. `self.seed`: Set the random seed for reproducibility (default: 42)
+2. `self.q_range`: Set the range of q-gram sizes to analyze [min, max] (default: [7, 7])
+3. `self.split_config`: Set the train-test split ratio (default: 0.5)
+4. `self.vowel_replacement_ratio`: Set the ratio of vowels to replace (default: 0.2) # Vowel and Consonant ratio must sum to 1.0
+5. `self.consonant_replacement_ratio`: Set the ratio of consonants to replace (default: 0.8) # Vowel and Consonant ratio must sum to 1.0
+6. `self.min_word_length`: Set the minimum word length to consider (default: 3)
+7. `self.prediction_method_name`: Set the prediction method to use (default: 'context_sensitive')
+8. `self.num_replacements`: Set the number of character replacements (default: 1)
+9. `self.log_level`: Set the logging level (default: logging.INFO)
+
+#### Running the Script
+
+To run the script with modified values:
+
+1. Open `qgram_type.py` in a text editor.
+2. Locate the `Config` class and modify the desired values in the `_set_values` method.
+3. Save the file.
+4. Run the script from the command line:
 
 ```bash
 python main/qgram_type.py
 ```
 
-To run the token-based analysis:
+#### Experiment Examples
 
-```bash
-python main/qgram_token.py
-```
+Here are some example modifications you can make to run different experiments:
 
-Make sure you are in the root directory of the project when running these commands.
+1. Analyze different q-gram sizes:
+   ```python
+   self.q_range = [5, 8]  # This will analyze q-grams from size 5 to 8
+   ```
 
-### Notes:
+2. Change the train-test split:
+   ```python
+   self.split_config = 0.7  # This will use 70% of the data for training
+   ```
+
+3. Adjust character replacement ratios:
+   ```python
+   self.vowel_replacement_ratio = 0.3
+   self.consonant_replacement_ratio = 0.7
+   ```
+
+4. Change the prediction method:
+   ```python
+   self.prediction_method_name = 'another_prediction_method'  # Replace with an actual method name from your code
+   ```
+
+5. Increase the number of character replacements:
+   ```python
+   self.num_replacements = 2  # This will replace 2 characters instead of 1
+   ```
+
+#### Analyzing Results
+
+After running the script:
+
+1. Check the console output for immediate results.
+2. Examine the log file in the `data/logs` directory for detailed information.
+3. Review the CSV files in the `data/outputs/csv` directory for prediction details.
+4. Check the text files in the `data/outputs/texts` directory for summary statistics.
+
+### Additional Notes
+
 - `qgram_type.py` is the primary script for this project and should be used for most analyses.
 - Use `qgram_token.py` when you need to analyze all word occurrences rather than just unique word types.
 - Ensure that all necessary data files and dependencies are in place before running the scripts.
 - You may need to adjust parameters or input files within the scripts depending on your specific analysis needs.
 
 If you encounter any issues or need to modify the analysis, refer to the comments within each script for guidance on customization and troubleshooting.
+
+Remember to document any changes you make to the configuration when reporting your results to ensure reproducibility of your experiments.
 
 ## Large Files
 
