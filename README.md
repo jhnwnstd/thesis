@@ -69,27 +69,11 @@ This project requires KenLM, a faster and smaller language model query library d
    ```bash
    pip install https://github.com/kpu/kenlm/archive/master.zip
    ```
-   Note: When installing via pip, you can set the `MAX_ORDER` environment variable to control the max order with which KenLM is built.
+   Note: When installing via pip, you can set the `MAX_ORDER` environment variable to control the max order with which KenLM is built. This is essential to run the analysis for more than 6 character grams. If you run into difficulties compiling it, then default to 6.
 
 4. Add the KenLM `build` directory to your system PATH or update your project's configuration to point to the KenLM installation directory.
 
-### Additional Notes:
-
-- KenLM supports reading ARPA files in compressed formats if compiled with the appropriate options:
-  - HAVE_ZLIB: Supports gzip (link with -lz)
-  - HAVE_BZLIB: Supports bzip2 (link with -lbz2)
-  - HAVE_XZLIB: Supports xz (link with -llzma)
-
-- KenLM offers two main data structures for querying: probing (fastest, uses most memory) and trie (least memory, slightly slower).
-
-- For large-scale applications, you can create a binary format for faster loading:
-  ```bash
-  ./build_binary input.arpa output.binary
-  ```
-
-- KenLM has been tested on various platforms including x86_64, x86, PPC64, and ARM, and runs on Linux, OS X, Cygwin, and MinGW.
-
-For more detailed information on usage, estimation, filtering, and benchmarks, refer to the [KenLM GitHub repository](https://github.com/kpu/kenlm) and the [official KenLM website](https://kheafield.com/code/kenlm/).
+For more detailed information on usage refer to the [KenLM GitHub repository](https://github.com/kpu/kenlm) and the [official KenLM website](https://kheafield.com/code/kenlm/).
 
 ## Usage
 
@@ -162,8 +146,6 @@ This project uses `pip` for package management. To update dependencies:
 
 ## Project Structure
 
-## Project Structure
-
 ```
 thesis/
 ├── csv_processing/
@@ -178,7 +160,7 @@ thesis/
 │ ├── predictions_class.py
 │ ├── qgram_analysis.py
 │ ├── qgram_token.py
-│ └── qgram_type.py
+│ └── qgram_type.py  # main script to run
 ├── .gitattributes
 ├── .gitignore
 ├── LICENSE
