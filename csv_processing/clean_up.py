@@ -5,6 +5,16 @@ import logging
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 
+def extract_correct_letter(row):
+    """
+    Extract the correct letter from Original_Word based on the index of '_' in Tested_Word.
+    """
+    try:
+        index = row['Tested_Word'].index('_')
+        return row['Original_Word'][index]
+    except ValueError:
+        return None
+
 def clean_dataset(file_path):
     try:
         df = pd.read_csv(file_path)
@@ -40,6 +50,9 @@ def clean_dataset(file_path):
         confidence_threshold = 0.1
         df = df[df['Top1_Confidence'] >= confidence_threshold]
         logging.info(f"Filtered rows with 'Top1_Confidence' below {confidence_threshold}. New row count: {len(df)}")
+        
+        # Extract the correct letter
+        df['Correct_Letter'] = df.apply(extract_correct_letter, axis=1)
         
         # Save the cleaned dataset, overwriting the original file
         df.to_csv(file_path, index=False)
