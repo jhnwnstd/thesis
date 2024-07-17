@@ -1,40 +1,42 @@
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from pathlib import Path
+from typing import Tuple
+import numpy as np
 
-def is_vowel(letter):
+def is_vowel(letter: str) -> bool:
     """Check if a letter is a vowel. Including 'y' as a sometimes vowel."""
     return letter.lower() in 'aeiouy'
 
-def load_and_preprocess(path):
+def load_and_preprocess(path: Path) -> Tuple[pd.DataFrame, pd.Series]:
     """Load the dataset and preprocess it for model training.
-    
+
     Args:
-        path (str or Path): Path to the dataset.
+        path (Path): Path to the dataset.
 
     Returns:
         tuple: A tuple containing the features DataFrame and target series.
     """
     df = pd.read_csv(path)
-    df['Word_Length'] = df['Original_Word'].str.len()  # Create a new column for word length
-    df['Missing_Letter_Index'] = df['Original_Word'].str.find("_")  # Find the index of the missing letter
-    df['Relative_Position'] = df['Missing_Letter_Index'] / df['Word_Length'].clip(lower=1)  # Avoid division by zero
-    df['Top1_Predicted_Letter_is_Vowel'] = df['Top1_Predicted_Letter'].apply(is_vowel)  # Check if the predicted letter is a vowel
-    df['Correct_Letter_is_Vowel'] = df['Correct_Letter(s)'].apply(is_vowel)  # Check if the correct letter is a vowel
+    df['Word_Length'] = df['Original_Word'].str.len()
+    df['Missing_Letter_Index'] = df['Original_Word'].str.find("_")
+    df['Relative_Position'] = df['Missing_Letter_Index'] / df['Word_Length'].clip(lower=1)
+    df['Top1_Predicted_Letter_is_Vowel'] = df['Top1_Predicted_Letter'].apply(is_vowel)
+    df['Correct_Letter_is_Vowel'] = df['Correct_Letter(s)'].apply(is_vowel)
 
     features = df[['Word_Length', 'Relative_Position', 'Top1_Predicted_Letter_is_Vowel', 'Correct_Letter_is_Vowel']]
     target = df['Top1_Is_Accurate']
 
     return features, target
 
-def train_and_evaluate_model(features, target):
+def train_and_evaluate_model(features: pd.DataFrame, target: pd.Series) -> Tuple[float, np.ndarray]:
     """Train and evaluate the Random Forest model.
 
     Args:
-        features (DataFrame): The features for model training.
-        target (Series): The target variable for the model.
+        features (pd.DataFrame): The features for model training.
+        target (pd.Series): The target variable for the model.
 
     Returns:
         tuple: A tuple containing the model's accuracy and feature importances.
@@ -48,13 +50,13 @@ def train_and_evaluate_model(features, target):
 
     return accuracy, feature_importances
 
-def main():
+def main() -> None:
     dataset_paths = {
-        "CLMET3": Path('data/outputs/csv/CLMET3_context_sensitive_split0.5_qrange7-7_prediction.csv'),
-        "Lampeter": Path('data/outputs/csv/sorted_tokens_lampeter_context_sensitive_split0.5_qrange7-7_prediction.csv'),
-        "Edges": Path('data/outputs/csv/sorted_tokens_openEdges_context_sensitive_split0.5_qrange7-7_prediction.csv'),
-        "CMU": Path('data/outputs/csv/cmudict_context_sensitive_split0.5_qrange7-7_prediction.csv'),
-        "Brown": Path('data/outputs/csv/brown_context_sensitive_split0.5_qrange7-7_prediction.csv')
+        "CLMET3": Path('main/data/outputs/csv/sorted_tokens_clmet_context_sensitive_split0.5_qrange7-7_prediction.csv'),
+        "Lampeter": Path('main/data/outputs/csv/sorted_tokens_lampeter_context_sensitive_split0.5_qrange7-7_prediction.csv'),
+        "Edges": Path('main/data/outputs/csv/sorted_tokens_openEdges_context_sensitive_split0.5_qrange7-7_prediction.csv'),
+        "CMU": Path('main/data/outputs/csv/cmudict_context_sensitive_split0.5_qrange7-7_prediction.csv'),
+        "Brown": Path('main/data/outputs/csv/brown_context_sensitive_split0.5_qrange7-7_prediction.csv')
     }
 
     results = {}
