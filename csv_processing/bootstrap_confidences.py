@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
 import logging
+from typing import Tuple, Optional
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -12,25 +13,21 @@ logger = logging.getLogger(__name__)
 sns.set(style="whitegrid", context="notebook", palette="Paired")
 plt.style.use('seaborn-v0_8-colorblind')
 
-# Define dataset paths
-datasets = {
-    "CLMET3": 'data/outputs/csv/CLMET3_context_sensitive_split0.5_qrange7-7_prediction.csv',
-    "Lampeter": 'data/outputs/csv/sorted_tokens_lampeter_context_sensitive_split0.5_qrange7-7_prediction.csv',
-    "Edges": 'data/outputs/csv/sorted_tokens_openEdges_context_sensitive_split0.5_qrange7-7_prediction.csv',
-    "CMU": 'data/outputs/csv/cmudict_context_sensitive_split0.5_qrange7-7_prediction.csv',
-    "Brown": 'data/outputs/csv/brown_context_sensitive_split0.5_qrange7-7_prediction.csv'
+# Paths to datasets
+DATASET_PATHS = {
+    "CLMET3": Path('main/data/outputs/csv/sorted_tokens_clmet_context_sensitive_split0.5_qrange7-7_prediction.csv'),
+    "Lampeter": Path('main/data/outputs/csv/sorted_tokens_lampeter_context_sensitive_split0.5_qrange7-7_prediction.csv'),
+    "Edges": Path('main/data/outputs/csv/sorted_tokens_openEdges_context_sensitive_split0.5_qrange7-7_prediction.csv'),
+    "CMU": Path('main/data/outputs/csv/cmudict_context_sensitive_split0.5_qrange7-7_prediction.csv'),
+    "Brown": Path('main/data/outputs/csv/brown_context_sensitive_split0.5_qrange7-7_prediction.csv')
 }
 
-def ensure_directory_exists(directory):
-    """
-    Ensure that the given directory exists, create it if it doesn't.
-    """
+def ensure_directory_exists(directory: str) -> None:
+    """Ensure that the given directory exists, create it if it doesn't."""
     os.makedirs(directory, exist_ok=True)
 
-def plot_confidence_intervals(data, title, figure_size=(12, 8), font_size=12, ci=95, save_path=None):
-    """
-    Plots confidence intervals for the given data using a bar chart.
-    """
+def plot_confidence_intervals(data: pd.DataFrame, title: str, figure_size: Tuple[int, int] = (12, 8), font_size: int = 12, ci: int = 95, save_path: Optional[str] = None) -> None:
+    """Plots confidence intervals for the given data using a bar chart."""
     colors = get_color_palette()
     fig, ax = plt.subplots(figsize=figure_size)
     metrics = ['Top1', 'Top2', 'Top3']
@@ -60,23 +57,23 @@ def plot_confidence_intervals(data, title, figure_size=(12, 8), font_size=12, ci
         plt.savefig(save_path)  # Save the plot as PNG
     plt.show()
 
-def get_color_palette():
+def get_color_palette() -> list:
     base_colors = sns.color_palette("Paired", 12)
     return [[base_colors[i + 1], base_colors[i]] for i in range(0, len(base_colors), 2)]
 
-def bootstrap_confidence(data, n_bootstrap=1000, ci=95):
+def bootstrap_confidence(data: pd.Series, n_bootstrap: int = 1000, ci: int = 95) -> Tuple[float, float, float]:
     if data.isnull().all():
         return None, None, None
 
-    bootstrap_samples = np.random.choice(data, (len(data), n_bootstrap), replace=True)
+    bootstrap_samples = np.random.choice(data.dropna(), (len(data.dropna()), n_bootstrap), replace=True)
     bootstrap_means = np.mean(bootstrap_samples, axis=0)
     confidence_bounds = np.percentile(bootstrap_means, [(100 - ci) / 2, 100 - (100 - ci) / 2])
     mean_confidence = np.mean(data)
     return confidence_bounds[0], confidence_bounds[1], mean_confidence
 
-def load_and_preprocess_data(path):
+def load_and_preprocess_data(path: Path) -> Optional[pd.DataFrame]:
     try:
-        data = pd.read_csv(Path(path))
+        data = pd.read_csv(path)
         if data.empty:
             logger.warning(f"No data to process after loading from {path}.")
             return None
@@ -94,13 +91,10 @@ def load_and_preprocess_data(path):
         logger.error(f"Error loading data from {path}: {e}")
         return None
 
-def process_datasets(datasets):
+def process_datasets(datasets: dict) -> None:
     all_data = []
     for name, path in datasets.items():
         logger.info(f"Processing dataset: {name}")
-        if not Path(path).exists():
-            logger.warning(f"File not found: {path}. Skipping dataset: {name}")
-            continue
         data_preprocessed = load_and_preprocess_data(path)
         if data_preprocessed is not None:
             all_data.append(data_preprocessed)
@@ -112,8 +106,8 @@ def process_datasets(datasets):
         save_path = 'output/bootstrap/All_Datasets.png'
         plot_confidence_intervals(combined_data, 'All Datasets', save_path=save_path)
 
-def main():
-    process_datasets(datasets)
+def main() -> None:
+    process_datasets(DATASET_PATHS)
 
 if __name__ == "__main__":
     main()
