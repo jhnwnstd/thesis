@@ -1,19 +1,11 @@
+# Before you run any analysis, you need to clean the data. This script reads the raw data files, cleans them, and overwrites the original files with the cleaned data.
+
 import pandas as pd
 from pathlib import Path
 import logging
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(message)s')
-
-def extract_correct_letter(row):
-    """
-    Extract the correct letter from Original_Word based on the index of '_' in Tested_Word.
-    """
-    try:
-        index = row['Tested_Word'].index('_')
-        return row['Original_Word'][index]
-    except ValueError:
-        return None
 
 def clean_dataset(file_path):
     try:
@@ -47,12 +39,9 @@ def clean_dataset(file_path):
             df = df[df[f'Top{i}_Predicted_Letter'].apply(lambda x: len(str(x)) == 1)]
         
         # Filter by confidence threshold (example threshold: 0.1)
-        confidence_threshold = 0.1
+        confidence_threshold = 0.01
         df = df[df['Top1_Confidence'] >= confidence_threshold]
         logging.info(f"Filtered rows with 'Top1_Confidence' below {confidence_threshold}. New row count: {len(df)}")
-        
-        # Extract the correct letter
-        df['Correct_Letter'] = df.apply(extract_correct_letter, axis=1)
         
         # Save the cleaned dataset, overwriting the original file
         df.to_csv(file_path, index=False)
