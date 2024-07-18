@@ -171,7 +171,7 @@ thesis/
 │ ├── index_length_vowel.py
 │ ├── letter_importances.py
 │ ├── letter_index.py
-│ ├── totalvsaccruate.py
+│ ├── totalvsaccurate.py
 │ └── word_length.py
 ├── main/
 │ ├── data/
@@ -201,16 +201,19 @@ thesis/
 - `qgram_type.py`: Performs q-gram analysis on unique word types in the corpus.
 
 ### Analysis Directory
+
 The analysis directory contains scripts for various data analysis tasks. Before running any analysis, ensure the data is formatted correctly by first executing `1_DATA_CLEANER.py`.
 
 - `1_DATA_CLEANER.py`: Cleans and prepares raw data for further analysis. This script must be run first.
-- `GAMs_model.py`: Fits and analyzes Generalized Additive Models (GAMs).
+- `G
+
+AMs_model.py`: Fits and analyzes Generalized Additive Models (GAMs).
 - `randomforest.py`: Trains and evaluates Random Forest models.
 - `histogram_confidences.py`: Creates histograms of confidence scores for predictions.
 - `letter_index_plot.py`: Plots related to the position of letters.
 - Other scripts perform various analyses and generate visualizations for the project.
 
-## Large and Exlcuded Files
+## Large Files and Dependencies
 
 This repository uses Git LFS to handle large files. The following file types are tracked by Git LFS:
 
@@ -228,14 +231,17 @@ The following file types are excluded using `.gitignore`:
 If you encounter issues:
 
 1. Ensure all prerequisites are correctly installed and up to date.
-Certainly! Here’s a refined and more concise version of the instruction:
-2. Ensure that KenLM is properly installed and configured. Check that the `KENLM_MAX_ORDER` value used during compilation matches the `MAX_ORDER` evironment value specified during the Python module installation. This step may pose challenges, so refer to the [KenLM documentation](https://github.com/kpu/kenlm) for troubleshooting. Patience and persistence are key to resolving any issues.
+2. Ensure that KenLM is properly installed and configured. Check that the `DKENLM_MAX_ORDER` value used during compilation matches the `MAX_ORDER` environment value specified during the Python module installation.
 3. Verify that input data files are in the correct locations within the `main/data/corpora/` directory.
 4. Check the log files in the `data/logs` directory for detailed error messages and stack traces.
 5. Ensure your Python virtual environment is correctly activated and all dependencies are installed.
 6. If you're having issues with specific analyses, try running the `1_DATA_CLEANER.py` script again to ensure your data is properly formatted.
 
 For persistent problems, please open an issue on the GitHub repository with a detailed description of the error, steps to reproduce it, and relevant parts of the log files.
+
+## Contributing
+
+Contributions are welcome. Please fork the repository and create a pull request with your changes.
 
 ## License
 
