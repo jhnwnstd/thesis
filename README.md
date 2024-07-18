@@ -54,7 +54,7 @@ Follow these steps to set up the project environment:
 
 3. Install KenLM as a Python module:
    ```bash
-   KENLM_MAX_ORDER=7 pip install https://github.com/kpu/kenlm/archive/master.zip
+   MAX_ORDER=7 pip install https://github.com/kpu/kenlm/archive/master.zip
    ```
    Note: The `MAX_ORDER` environment variable controls the maximum n-gram order. Adjust this value if needed, but ensure it matches the value used in KenLM compilation (see next section).
 
