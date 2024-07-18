@@ -229,7 +229,7 @@ The following file types are excluded using `.gitignore`:
 If you encounter issues:
 
 1. Ensure all prerequisites are correctly installed and up to date.
-2. Check that KenLM is properly set up and accessible. Verify that the `KENLM_MAX_ORDER` used in compilation matches the one used for the Python module installation.
+2. Check that KenLM is properly set up and accessible. Verify that the `KENLM_MAX_ORDER` used in compilation matches the `MAX_ORDER` used for the Python module installation.
 3. Verify that input data files are in the correct locations within the `main/data/corpora/` directory.
 4. Check the log files in the `data/logs` directory for detailed error messages and stack traces.
 5. Ensure your Python virtual environment is correctly activated and all dependencies are installed.
