@@ -52,7 +52,9 @@ def calculate_missing_index_stats(data: pd.DataFrame) -> pd.DataFrame:
 def perform_logistic_regression(data: pd.DataFrame) -> Optional[smf.logit]:
     """Perform logistic regression analysis."""
     try:
-        return smf.logit('Top1_Is_Accurate ~ Normalized_Missing_Index', data=data).fit()
+        model = smf.logit('Top1_Is_Accurate ~ Normalized_Missing_Index', data=data).fit()
+        logger.info("Logistic regression completed successfully")
+        return model
     except Exception as e:
         logger.error(f"Error in logistic regression: {str(e)}")
         return None
@@ -60,7 +62,9 @@ def perform_logistic_regression(data: pd.DataFrame) -> Optional[smf.logit]:
 def perform_linear_regression(data: pd.DataFrame) -> Optional[smf.ols]:
     """Perform linear regression analysis."""
     try:
-        return smf.ols('Top1_Is_Accurate ~ Normalized_Missing_Index', data=data).fit()
+        model = smf.ols('Top1_Is_Accurate ~ Normalized_Missing_Index', data=data).fit()
+        logger.info("Linear regression completed successfully")
+        return model
     except Exception as e:
         logger.error(f"Error in linear regression: {str(e)}")
         return None
@@ -82,8 +86,14 @@ def plot_accuracy_vs_index(stats: pd.DataFrame, dataset_name: str):
     plt.title(f'Accuracy vs Normalized Missing Index for {dataset_name} Dataset')
     plt.xlabel('Normalized Missing Index')
     plt.ylabel('Accuracy')
-    plt.savefig(f'{dataset_name}_accuracy_vs_index.png')
-    plt.show()
+    
+    # Define the save path for the plot
+    save_dir = Path(f'output/letter_index_plots')
+    save_dir.mkdir(parents=True, exist_ok=True)
+    save_path = save_dir / f'{dataset_name}_accuracy_vs_index.png'
+    
+    plt.savefig(save_path)
+    plt.close()
 
 def analyze_dataset(args: Tuple[str, Path]) -> Dict[str, Optional[Dict]]:
     """Analyze a single dataset."""

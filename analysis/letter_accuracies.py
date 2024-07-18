@@ -6,7 +6,7 @@ import seaborn as sns
 from scipy.stats import f_oneway
 import logging
 from typing import Dict, Optional, Tuple
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

@@ -55,7 +55,7 @@ def plot_confidence_intervals(data: pd.DataFrame, title: str, figure_size: Tuple
     if save_path:
         ensure_directory_exists(os.path.dirname(save_path))  # Ensure directory exists
         plt.savefig(save_path)  # Save the plot as PNG
-    plt.show()
+    plt.close(fig)  # Close the plot
 
 def get_color_palette() -> list:
     base_colors = sns.color_palette("Paired", 12)

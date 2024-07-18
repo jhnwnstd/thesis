@@ -8,11 +8,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import logging
 from typing import Optional, Dict, Tuple
-from concurrent.futures import ProcessPoolExecutor, as_completed
 import functools
 
 # Setup logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
 
 # Paths to datasets
@@ -26,7 +25,7 @@ DATASET_PATHS = {
 
 class Letters(Enum):
     VOWELS = frozenset('aeèéiîouyæœ')
-    CONSONANTS = frozenset('bcdfghjklmnpqrstvwxz')
+    CONSONANTS = frozenset('bcdfghjklmnpqrstvwxzȝ')
 
 @functools.lru_cache(maxsize=None)
 def is_vowel(char: str) -> bool:
@@ -85,13 +84,17 @@ def plot_coefficients(model: LogitResults, dataset_name: str):
                  yerr=(conf_ints[1] - conf_ints[0])/2, fmt='none', c='black')
     plt.xticks(rotation=45, ha='right')
     plt.title(f'Logistic Regression Coefficients for {dataset_name}')
+    
+    # Define the save path for the plot
+    save_dir = Path('output/letter_index_plots')
+    save_dir.mkdir(parents=True, exist_ok=True)
+    save_path = save_dir / f'{dataset_name}_coefficients.png'
     plt.tight_layout()
-    plt.savefig(f'logistic_regression_coefficients_{dataset_name}.png')
+    plt.savefig(save_path)
     plt.close()
 
-def process_dataset(args: Tuple[str, Path]) -> Tuple[str, Optional[pd.DataFrame], Optional[LogitResults]]:
+def process_dataset(dataset_name: str, file_path: Path) -> Tuple[str, Optional[pd.DataFrame], Optional[LogitResults]]:
     """Process a single dataset."""
-    dataset_name, file_path = args
     data = preprocess_data(file_path)
     if data is not None and not data.empty:
         model = run_logistic_regression(data, dataset_name)
@@ -100,16 +103,14 @@ def process_dataset(args: Tuple[str, Path]) -> Tuple[str, Optional[pd.DataFrame]
 
 def main():
     results = {}
-    with ProcessPoolExecutor() as executor:
-        futures = [executor.submit(process_dataset, (name, path)) for name, path in DATASET_PATHS.items()]
-        for future in as_completed(futures):
-            dataset_name, data, model = future.result()
-            if data is not None and model is not None:
-                results[dataset_name] = {
-                    'data': data,
-                    'model': model
-                }
-                plot_coefficients(model, dataset_name)
+    for name, path in DATASET_PATHS.items():
+        dataset_name, data, model = process_dataset(name, path)
+        if data is not None and model is not None:
+            results[dataset_name] = {
+                'data': data,
+                'model': model
+            }
+            plot_coefficients(model, dataset_name)
 
     # Compare results across datasets
     for dataset_name, result in results.items():

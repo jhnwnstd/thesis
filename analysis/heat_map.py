@@ -18,11 +18,11 @@ def load_dataset(filepath: Path) -> pd.DataFrame:
 
 def filter_mispredictions(data: pd.DataFrame) -> pd.DataFrame:
     """Filter dataset to only include mispredictions."""
-    return data[data['Correct_Letter'] != data['Top1_Predicted_Letter']] if not data.empty else pd.DataFrame()
+    return data[data['Correct_Letter(s)'] != data['Top1_Predicted_Letter']] if not data.empty else pd.DataFrame()
 
 def calculate_confusion_matrix(mispredictions: pd.DataFrame) -> pd.DataFrame:
     """Calculate and normalize the confusion matrix for mispredictions."""
-    confusion_matrix = pd.crosstab(mispredictions['Correct_Letter'], mispredictions['Top1_Predicted_Letter'])
+    confusion_matrix = pd.crosstab(mispredictions['Correct_Letter(s)'], mispredictions['Top1_Predicted_Letter'])
     confusion_matrix = confusion_matrix.astype(float)  # Convert to float
     np.fill_diagonal(confusion_matrix.values, np.nan)
     return confusion_matrix.div(confusion_matrix.sum(axis=1), axis=0)

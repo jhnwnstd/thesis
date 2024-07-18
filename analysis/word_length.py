@@ -1,13 +1,11 @@
-from pathlib import Path
 import pandas as pd
-import numpy as np
+from pathlib import Path
 import statsmodels.formula.api as smf
 from statsmodels.discrete.discrete_model import LogitResults
 import matplotlib.pyplot as plt
 import seaborn as sns
 import logging
-from typing import Dict, Optional, Tuple
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from typing import Dict, Optional
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -56,23 +54,31 @@ def perform_logistic_regression(data: pd.DataFrame) -> Optional[LogitResults]:
 
 def plot_accuracy_vs_word_length(stats: pd.DataFrame, dataset_name: str):
     """Create a plot of accuracy vs word length."""
-    plt.figure(figsize=(12, 6))
-    sns.scatterplot(data=stats, x='Word_Length', y='Accuracy_Mean', size='Sample_Count', legend=False)
+    plt.figure(figsize=(14, 8))
+    sns.scatterplot(data=stats, x='Word_Length', y='Accuracy_Mean', size='Sample_Count', legend=False, sizes=(20, 200))
     
     # Filter out rows with NaN in Accuracy_SEM
     valid_stats = stats.dropna(subset=['Accuracy_SEM'])
     
     plt.errorbar(valid_stats['Word_Length'], valid_stats['Accuracy_Mean'], 
-                 yerr=valid_stats['Accuracy_SEM'], fmt='none', alpha=0.5)
-    plt.title(f'Accuracy vs Word Length for {dataset_name} Dataset')
-    plt.xlabel('Word Length')
-    plt.ylabel('Accuracy')
-    plt.savefig(f'{dataset_name}_accuracy_vs_word_length.png')
+                 yerr=valid_stats['Accuracy_SEM'], fmt='none', ecolor='gray', alpha=0.7, capsize=4)
+    plt.title(f'Accuracy vs Word Length for {dataset_name} Dataset', fontsize=16, fontweight='bold')
+    plt.xlabel('Word Length', fontsize=14)
+    plt.ylabel('Accuracy', fontsize=14)
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
+    plt.grid(True, linestyle='--', alpha=0.6)
+    
+    # Define the save path for the plot
+    save_dir = Path('output/word_length_plots')
+    save_dir.mkdir(parents=True, exist_ok=True)
+    save_path = save_dir / f'{dataset_name}_accuracy_vs_word_length.png'
+    plt.tight_layout()
+    plt.savefig(save_path)
     plt.close()
 
-def analyze_dataset(args: Tuple[str, Path]) -> Dict[str, Optional[Dict]]:
+def analyze_dataset(dataset_name: str, file_path: Path) -> Dict[str, Optional[Dict]]:
     """Analyze a single dataset."""
-    dataset_name, file_path = args
     data = load_and_prepare_data(file_path)
     if data is None:
         return {dataset_name: None}
@@ -89,10 +95,9 @@ def analyze_dataset(args: Tuple[str, Path]) -> Dict[str, Optional[Dict]]:
 
 def main():
     results = {}
-    with ProcessPoolExecutor() as executor:
-        futures = [executor.submit(analyze_dataset, (name, path)) for name, path in DATASET_PATHS.items()]
-        for future in as_completed(futures):
-            results.update(future.result())
+    for name, path in DATASET_PATHS.items():
+        result = analyze_dataset(name, path)
+        results.update(result)
 
     for dataset_name, result in results.items():
         if result is not None:
