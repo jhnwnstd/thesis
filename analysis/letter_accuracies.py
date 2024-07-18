@@ -5,10 +5,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import f_oneway
 import logging
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, Tuple
 from concurrent.futures import ProcessPoolExecutor
-import statsmodels.api as sm
-from statsmodels.formula.api import ols
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import logging
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, Tuple, Optional
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 # Configure logging
@@ -19,7 +19,7 @@ DATASET_PATHS: Dict[str, str] = {
     "Brown": 'main/data/outputs/csv/brown_context_sensitive_split0.5_qrange7-7_prediction.csv'
 }
 
-def load_dataset(args: Tuple[str, str]) -> Tuple[str, Optional[pd.DataFrame]] :
+def load_dataset(args: Tuple[str, str]) -> Tuple[str, Optional[pd.DataFrame]]:
     """Loads dataset from the given path, handling errors."""
     name, path = args
     try:
@@ -30,7 +30,7 @@ def load_dataset(args: Tuple[str, str]) -> Tuple[str, Optional[pd.DataFrame]] :
         logger.error(f"Error loading dataset {name} from {path}: {e}")
         return name, None
 
-def calculate_histogram_data(df: pd.DataFrame, column_name: str, bins: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray] :
+def calculate_histogram_data(df: pd.DataFrame, column_name: str, bins: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """Calculate histogram data for the given dataframe and column."""
     valid_predictions = df[df[column_name]]["Top1_Confidence"]
     invalid_predictions = df[~df[column_name]]["Top1_Confidence"]
@@ -42,33 +42,33 @@ def calculate_histogram_data(df: pd.DataFrame, column_name: str, bins: np.ndarra
     valid_proportions = np.divide(valid_counts, total_counts, where=total_counts != 0)
     invalid_proportions = np.divide(invalid_counts, total_counts, where=total_counts != 0)
     
-    return valid_proportions, invalid_proportions, total_counts
+    return valid_proportions, invalid_proportions
 
 def plot_normalized_stacked_histogram(ax: plt.Axes, dataset: pd.DataFrame, valid_color: str, invalid_color: str, 
                                       label: str, column_name: str, threshold: float = 0.60, bins: int = 30) -> None:
-    """Enhanced plotting to highlight the first bin where proportions exceed a given threshold."""
+    """Enhanced plotting to highlight the second bin where proportions exceed a given threshold."""
     if dataset is None or dataset.empty:
         ax.text(0.5, 0.5, 'Data Unavailable', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, fontsize=16)
         return
 
     bins = np.linspace(0, 1, bins + 1)
-    valid_proportions, invalid_proportions, total_counts = calculate_histogram_data(dataset, column_name, bins)
+    valid_proportions, invalid_proportions = calculate_histogram_data(dataset, column_name, bins)
     
-    # Find the first bin where valid proportions exceed the threshold
-    first_threshold_bin_index = np.argmax(valid_proportions >= threshold)
-    first_threshold_bin = bins[first_threshold_bin_index]
-    
-    ax.bar(bins[:-1], valid_proportions, width=np.diff(bins), align='edge', color=valid_color, alpha=0.75, label='Valid' if column_name == "Top1_Is_Valid" else 'Accurate')
-    ax.bar(bins[:-1], invalid_proportions, width=np.diff(bins), align='edge', color=invalid_color, alpha=0.65, label='Invalid' if column_name == "Top1_Is_Valid" else 'Inaccurate', bottom=valid_proportions)
-    
-    # Highlight the bin where valid predictions first exceed the threshold
-    if valid_proportions[first_threshold_bin_index] >= threshold:
-        threshold_value = valid_proportions[first_threshold_bin_index]
-        ax.axvline(first_threshold_bin, color='black', linestyle='--')
-        ax.annotate(f'{first_threshold_bin:.2f}', xy=(first_threshold_bin, threshold_value), xytext=(first_threshold_bin + 0.05, threshold_value - 0.05),
+    # Find the second bin where valid proportions exceed the threshold
+    threshold_bin_indices = np.where(valid_proportions >= threshold)[0]
+    if len(threshold_bin_indices) > 1:
+        second_threshold_bin_index = threshold_bin_indices[1]
+        second_threshold_bin = bins[second_threshold_bin_index]
+        
+        ax.axvline(second_threshold_bin, color='black', linestyle='--')
+        ax.annotate(f'{second_threshold_bin:.2f}', xy=(second_threshold_bin, valid_proportions[second_threshold_bin_index]), 
+                    xytext=(second_threshold_bin + 0.05, valid_proportions[second_threshold_bin_index] - 0.05),
                     arrowprops=dict(facecolor='black', shrink=0.05), fontsize=16, color='black', fontweight='bold')
         ax.plot([], [], color='black', linestyle='--', label=f'Threshold at {threshold*100:.0f}%')
 
+    ax.bar(bins[:-1], valid_proportions, width=np.diff(bins), align='edge', color=valid_color, alpha=0.75, label='Valid' if column_name == "Top1_Is_Valid" else 'Accurate')
+    ax.bar(bins[:-1], invalid_proportions, width=np.diff(bins), align='edge', color=invalid_color, alpha=0.65, label='Invalid' if column_name == "Top1_Is_Valid" else 'Inaccurate', bottom=valid_proportions)
+    
     ax.set_xlabel('Top 1 Confidence', fontsize=14)
     ax.set_ylabel('Proportion', fontsize=14)
     ax.set_title(f'{label} Dataset ({column_name.split("_")[-1].capitalize()})', fontsize=16, fontweight='bold')
@@ -76,7 +76,7 @@ def plot_normalized_stacked_histogram(ax: plt.Axes, dataset: pd.DataFrame, valid
     ax.grid(True, which='both', linestyle='--', linewidth=0.5)
     ax.minorticks_on()
 
-def plot_and_save_figures(loaded_datasets: Dict[str, pd.DataFrame], column_name: str, filename: str) -> None:
+def plot_and_save_figures(loaded_datasets: Dict[str, Optional[pd.DataFrame]], column_name: str, filename: str) -> None:
     """Plot and save figures for given column_name."""
     n_datasets = len(loaded_datasets)
     n_cols = 2

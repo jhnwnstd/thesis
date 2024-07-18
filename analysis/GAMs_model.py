@@ -49,43 +49,18 @@ def prepare_data(data: pd.DataFrame) -> Optional[pd.DataFrame]:
         return None  # Return None if required columns are missing
 
     # Calculate the length of each word in the 'Tested_Word' column
-    # This is used later for normalizing the missing letter index
     data['Word_Length'] = data['Tested_Word'].str.len()
 
     # Calculate the normalized index of the missing letter
-    # 1. Find the index of '_' in each word
-    # 2. Divide by (word length - 1) to normalize
+    # Find the index of '_' in each word and divide by (word length - 1) to normalize
     # This gives a value between 0 and 1, representing the relative position of the missing letter
     data['Normalized_Missing_Index'] = data['Tested_Word'].str.find('_') / (data['Word_Length'] - 1)
 
-    # Clean up the data:
-    # 1. Replace infinity values with NaN
-    #    (This can happen if the word length is 1, causing division by zero)
-    # 2. Drop all rows with NaN values
-    # This ensures we only keep valid, computable data points
+    # Clean up the data by replacing infinity values with NaN (which can happen if word length is 1)
+    # and then dropping all rows with NaN values to keep only valid, computable data points
     data = data.replace({'Normalized_Missing_Index': {np.inf: np.nan, -np.inf: np.nan}}).dropna()
     
     return data  # Return the cleaned and prepared dataframe
-
-# Explanation of the function's design:
-# 1. Input validation: The function first checks for required columns. This prevents
-#    errors later in the processing and provides clear feedback on data issues.
-#
-# 2. Word length calculation: This is done separately as it's used in the next step
-#    and might be useful for other analyses.
-#
-# 3. Normalized missing index: This is the key feature for the analysis. It represents
-#    the position of the missing letter, normalized by word length. This allows
-#    comparison across words of different lengths.
-#
-# 4. Data cleaning: Replacing infinities with NaN and then dropping NaNs ensures
-#    that only valid data points are kept. This is crucial for accurate analysis.
-#
-# 5. The function returns None for invalid input, allowing the calling code to
-#    handle this case appropriately.
-#
-# This design ensures that the output data is clean, normalized, and ready for
-# further analysis or model fitting.
 
 def fit_model(X: pd.DataFrame, y: pd.Series, n_splines: int = 15) -> Optional[LogisticGAM]:
     """Fit a logistic GAM model."""
