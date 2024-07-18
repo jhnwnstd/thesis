@@ -16,7 +16,7 @@ class Config:
     consonant_replacement_ratio: float = 0.8 # must sum to 1 with vowel_replacement_ratio
     min_word_length: int = 3 # minimum word length for evaluation
     prediction_method_name: str = 'context_sensitive' # method to use for prediction
-    num_replacements: int = 1 # number of replacements to make in the context_sensitive method
+    num_replacements: int = 1 # number of replacements to make: Note not all features of this code work with num_replacements > 1
     log_level: int = logging.INFO
 
     def __post_init__(self):
