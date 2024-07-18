@@ -39,7 +39,7 @@ def clean_dataset(file_path):
             df = df[df[f'Top{i}_Predicted_Letter'].apply(lambda x: len(str(x)) == 1)]
         
         # Filter by confidence threshold (example threshold: 0.1)
-        confidence_threshold = 0.01
+        confidence_threshold = 0.1
         df = df[df['Top1_Confidence'] >= confidence_threshold]
         logging.info(f"Filtered rows with 'Top1_Confidence' below {confidence_threshold}. New row count: {len(df)}")
         
