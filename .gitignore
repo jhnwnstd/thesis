@@ -154,9 +154,7 @@ cython_debug/
 # CSV files
 *.csv
 
-# Text files
-*.txt
-
 # Output files
 outputs/
 output/
+models/
