@@ -85,12 +85,12 @@ For more detailed information on KenLM usage, refer to the [KenLM GitHub reposit
 
 The main scripts for this project are located in the `main` directory. There are two primary scripts you can run:
 
-### Running Experiments with qgram_type.py
+### Running Experiments with `qgram_type.py`
 
 The `qgram_type.py` script is the main script for running q-gram analysis on word types. To run an experiment:
 
-1. Open `qgram_type.py` in a text editor.
-2. Locate the `Config` class and modify the desired values in the `_set_values` method.
+1. Open `qgram_type.py` in a text editor or IDE.
+2. Locate the `Config` class and modify the desired values.
 3. Save the file.
 4. Run the script from the command line:
    ```bash
@@ -99,17 +99,29 @@ The `qgram_type.py` script is the main script for running q-gram analysis on wor
 
 #### Changing Configuration Values
 
-To run experiments with different settings, modify the following values in the `_set_values` method of the `Config` class:
+To run experiments with different settings, modify the following values in the `Config` class:
 
-1. `self.seed`: Set the random seed for reproducibility (default: 42)
-2. `self.q_range`: Set the range of q-gram sizes to analyze [min, max] (default: [7, 7])
-3. `self.split_config`: Set the train-test split ratio (default: 0.5)
-4. `self.vowel_replacement_ratio`: Set the ratio of vowels to replace (default: 0.2)
-5. `self.consonant_replacement_ratio`: Set the ratio of consonants to replace (default: 0.8)
-6. `self.min_word_length`: Set the minimum word length to consider (default: 3)
-7. `self.prediction_method_name`: Set the prediction method to use (default: 'context_sensitive')
-8. `self.num_replacements`: Set the number of character replacements (default: 1)
-9. `self.log_level`: Set the logging level (default: logging.INFO)
+1. `seed`: Set the random seed for reproducibility (default: 42)
+2. `q_range`: Set the range of q-gram sizes to analyze [min, max] (default: [7, 7])
+3. `split_config`: Set the train-test split ratio (default: 0.5)
+4. `vowel_replacement_ratio`: Set the ratio of vowels to replace (default: 0.2)
+5. `consonant_replacement_ratio`: Set the ratio of consonants to replace (default: 0.8)
+6. `min_word_length`: Set the minimum word length to consider (default: 3)
+7. `prediction_method_name`: Set the prediction method to use (default: 'context_sensitive')
+8. `num_replacements`: Set the number of character replacements (default: 1)
+9. `log_level`: Set the logging level (default: logging.INFO)
+
+### Running `process_corpus.py`
+
+The `process_corpus.py` script is used to process and evaluate multiple corpora based on the configurations specified in the `Config` class. To run the script:
+
+1. Ensure that the `CorpusManager` and `EvaluateModel` classes are correctly implemented and imported.
+2. Run the script from the command line:
+   ```bash
+   python process_corpus.py
+   ```
+
+This script will process the specified corpora, evaluate them, and log the results. The configuration parameters can be adjusted in the `Config` class within `process_corpus.py`.
 
 #### Experiment Examples
 
