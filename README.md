@@ -214,7 +214,7 @@ AMs_model.py`: Fits and analyzes Generalized Additive Models (GAMs).
 - `letter_index_plot.py`: Plots related to the position of letters.
 - Other scripts perform various analyses and generate visualizations for the project.
 
-## Large Files and Dependencies
+## Large Files and Ignored Files
 
 This repository uses Git LFS to handle large files. The following file types are tracked by Git LFS:
 
