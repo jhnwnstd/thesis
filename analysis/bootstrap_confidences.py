@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -22,11 +21,11 @@ DATASET_PATHS = {
     "Brown": Path('main/data/outputs/csv/brown_context_sensitive_split0.5_qrange7-7_prediction.csv')
 }
 
-def ensure_directory_exists(directory: str) -> None:
+def ensure_directory_exists(directory: Path) -> None:
     """Ensure that the given directory exists, create it if it doesn't."""
-    os.makedirs(directory, exist_ok=True)
+    directory.mkdir(parents=True, exist_ok=True)
 
-def plot_confidence_intervals(data: pd.DataFrame, title: str, figure_size: Tuple[int, int] = (12, 8), font_size: int = 12, ci: int = 95, save_path: Optional[str] = None) -> None:
+def plot_confidence_intervals(data: pd.DataFrame, title: str, figure_size: Tuple[int, int] = (12, 8), font_size: int = 12, ci: int = 95, save_path: Optional[Path] = None) -> None:
     """Plots confidence intervals for the given data using a bar chart."""
     colors = get_color_palette()
     fig, ax = plt.subplots(figsize=figure_size)
@@ -53,7 +52,7 @@ def plot_confidence_intervals(data: pd.DataFrame, title: str, figure_size: Tuple
     ax.tick_params(axis='both', labelsize=font_size)
     plt.tight_layout()
     if save_path:
-        ensure_directory_exists(os.path.dirname(save_path))  # Ensure directory exists
+        ensure_directory_exists(save_path.parent)  # Ensure directory exists
         plt.savefig(save_path)  # Save the plot as PNG
     plt.close(fig)  # Close the plot
 
@@ -98,12 +97,12 @@ def process_datasets(datasets: dict) -> None:
         data_preprocessed = load_and_preprocess_data(path)
         if data_preprocessed is not None:
             all_data.append(data_preprocessed)
-            save_path = f'output/bootstrap/{name}.png'  # Define the save path for the PNG
+            save_path = Path(f'output/bootstrap/{name}.png')  # Define the save path for the PNG
             plot_confidence_intervals(data_preprocessed, name, save_path=save_path)  # Pass the save path
     
     if all_data:
         combined_data = pd.concat(all_data, ignore_index=True)
-        save_path = 'output/bootstrap/All_Datasets.png'
+        save_path = Path('output/bootstrap/All_Datasets.png')
         plot_confidence_intervals(combined_data, 'All Datasets', save_path=save_path)
 
 def main() -> None:
