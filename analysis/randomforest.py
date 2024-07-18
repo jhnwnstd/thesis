@@ -2,6 +2,7 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+from sklearn.feature_selection import RFECV
 from pathlib import Path
 from typing import Tuple
 import numpy as np
@@ -31,24 +32,26 @@ def load_and_preprocess(path: Path) -> Tuple[pd.DataFrame, pd.Series]:
 
     return features, target
 
-def train_and_evaluate_model(features: pd.DataFrame, target: pd.Series) -> Tuple[float, np.ndarray]:
-    """Train and evaluate the Random Forest model.
+def train_and_evaluate_model(features: pd.DataFrame, target: pd.Series) -> Tuple[float, np.ndarray, np.ndarray]:
+    """Train and evaluate the Random Forest model with RFECV for feature selection.
 
     Args:
         features (pd.DataFrame): The features for model training.
         target (pd.Series): The target variable for the model.
 
     Returns:
-        tuple: A tuple containing the model's accuracy and feature importances.
+        tuple: A tuple containing the model's accuracy, selected features, and feature importances.
     """
     X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.3, random_state=42)
-    clf = RandomForestClassifier(random_state=42)
-    clf.fit(X_train, y_train)
-    y_pred = clf.predict(X_test)
+    rf_model = RandomForestClassifier(random_state=42)
+    rfecv = RFECV(estimator=rf_model, step=1, cv=5, scoring='accuracy', n_jobs=-1)
+    rfecv.fit(X_train, y_train)
+    y_pred = rfecv.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
-    feature_importances = clf.feature_importances_
+    selected_features = rfecv.support_
+    feature_importances = rfecv.estimator_.feature_importances_
 
-    return accuracy, feature_importances
+    return accuracy, selected_features, feature_importances
 
 def main() -> None:
     dataset_paths = {
@@ -65,15 +68,15 @@ def main() -> None:
     for title, path in dataset_paths.items():
         print(f"Processing dataset: {title}")
         features, target = load_and_preprocess(path)
-        accuracy, feature_importances = train_and_evaluate_model(features, target)
-        results[title] = {"accuracy": accuracy, "feature_importances": feature_importances}
+        accuracy, selected_features, feature_importances = train_and_evaluate_model(features, target)
+        results[title] = {"accuracy": accuracy, "selected_features": selected_features, "feature_importances": feature_importances}
 
     for title, info in results.items():
         print(f"\n{title}:")
         print(f"Accuracy = {info['accuracy']:.4f}")
-        print("Feature Importances:")
-        for name, importance in zip(feature_names, info['feature_importances']):
-            print(f"    {name}: {importance:.4f}")
+        print("Selected Features and Their Importances:")
+        for name, selected, importance in zip(feature_names, info['selected_features'], info['feature_importances']):
+            print(f"    {name}: {'Selected' if selected else 'Not Selected'}, Importance: {importance:.4f}")
 
 if __name__ == "__main__":
     main()
