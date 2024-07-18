@@ -32,7 +32,7 @@ Key features of this project include:
 Ensure you have the following software installed on your system:
 
 - [Git](https://git-scm.com/) (version 2.25.0 or newer)
-- [Python](https://www.python.org/) (version 3.8 or newer)
+- [Python](https://www.python.org/) (version 3.11 or newer)
 - [Git Large File Storage (LFS)](https://git-lfs.github.com/) (version 2.13.0 or newer)
 
 It's recommended to use a Unix-like environment (Linux or macOS) for optimal compatibility. If using Windows, consider using Windows Subsystem for Linux (WSL) or Git Bash.
