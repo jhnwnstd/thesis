@@ -111,18 +111,6 @@ To run experiments with different settings, modify the following values in the `
 8. `num_replacements`: Set the number of character replacements (default: 1)
 9. `log_level`: Set the logging level (default: logging.INFO)
 
-### Running `process_corpus.py`
-
-The `process_corpus.py` script is used to process and evaluate multiple corpora based on the configurations specified in the `Config` class. To run the script:
-
-1. Ensure that the `CorpusManager` and `EvaluateModel` classes are correctly implemented and imported.
-2. Run the script from the command line:
-   ```bash
-   python process_corpus.py
-   ```
-
-This script will process the specified corpora, evaluate them, and log the results. The configuration parameters can be adjusted in the `Config` class within `process_corpus.py`.
-
 #### Experiment Examples
 
 Here are some example modifications you can make to run different experiments:
@@ -194,7 +182,6 @@ thesis/
 │ ├── corpus_class.py
 │ ├── evaluation_class.py
 │ ├── predictions_class.py
-│ ├── qgram_analysis.py
 │ ├── qgram_token.py
 │ └── qgram_type.py        # main script to run
 ├── .gitattributes
