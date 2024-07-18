@@ -1,28 +1,45 @@
-# Thesis Project
+# English Orthography Predictability Analysis
 
-This repository contains all the code and resources related to my thesis. Below, you'll find detailed instructions on how to set up and use this repository, including handling large files and managing dependencies.
+This repository contains the code for my thesis project on analyzing the predictability of English orthography using n-gram models. The project aims to investigate factors influencing letter prediction accuracy in English words, providing insights into the regularity of English spelling.
 
 ## Table of Contents
 
+- [Project Overview](#project-overview)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [KenLM Dependency](#kenlm-dependency)
 - [Usage](#usage)
-- [Large Files](#large-files)
-- [Managing Dependencies](#managing-dependencies)
+  - [Running Experiments with qgram_type.py](#running-experiments-with-qgram_typepy)
+  - [Running Experiments with qgram_token.py](#running-experiments-with-qgram_tokenpy)
+  - [Analyzing Results](#analyzing-results)
 - [Project Structure](#project-structure)
+- [Large Files and Dependencies](#large-files-and-dependencies)
+- [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [License](#license)
 
+## Project Overview
+
+This thesis project explores the predictability of English orthography using computational methods. It employs n-gram models to predict missing letters in English words, analyzing various factors such as word length, missing letter position, and vowel presence. The research utilizes a diverse range of datasets, including the CMU Pronouncing Dictionary, Brown Corpus, and several historical corpora, to provide a comprehensive view of English orthographic patterns across different time periods and text types.
+
+Key features of this project include:
+- Implementation of n-gram models for letter prediction
+- Analysis of word types to minimize frequency biases and focus on underlying orthographic structures
+- Visualization techniques and statistical analysis of results
+
 ## Prerequisites
 
-Ensure you have the following installed:
+Ensure you have the following software installed on your system:
 
-- [Git](https://git-scm.com/) (2.25.0 or newer)
-- [Python](https://www.python.org/) (3.8 or newer)
-- [Git Large File Storage (LFS)](https://git-lfs.github.com/) (2.13.0 or newer)
+- [Git](https://git-scm.com/) (version 2.25.0 or newer)
+- [Python](https://www.python.org/) (version 3.8 or newer)
+- [Git Large File Storage (LFS)](https://git-lfs.github.com/) (version 2.13.0 or newer)
+
+It's recommended to use a Unix-like environment (Linux or macOS) for optimal compatibility. If using Windows, consider using Windows Subsystem for Linux (WSL) or Git Bash.
 
 ## Installation
+
+Follow these steps to set up the project environment:
 
 1. Clone the repository:
    ```bash
@@ -30,26 +47,20 @@ Ensure you have the following installed:
    cd thesis
    ```
 
-2. Set up Git LFS:
-   ```bash
-   git lfs install
-   git lfs track "main/data/corpora/*.txt"
-   ```
-
-3. Create and activate a virtual environment:
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-   ```
-
-4. Install required packages:
+2. Install required packages:
    ```bash
    pip install -r requirements.txt
    ```
 
+3. Install KenLM as a Python module:
+   ```bash
+   KENLM_MAX_ORDER=7 pip install https://github.com/kpu/kenlm/archive/master.zip
+   ```
+   Note: The `MAX_ORDER` environment variable controls the maximum n-gram order. Adjust this value if needed, but ensure it matches the value used in KenLM compilation (see next section).
+
 ## KenLM Dependency
 
-This project requires KenLM, a faster and smaller language model query library developed by Kenneth Heafield. To set up KenLM:
+This project heavily relies on KenLM, a fast and efficient language model toolkit developed by Kenneth Heafield. To set up KenLM:
 
 1. Clone the KenLM repository:
    ```bash
@@ -57,37 +68,34 @@ This project requires KenLM, a faster and smaller language model query library d
    cd kenlm
    ```
 
-2. Create a build directory and compile:
+2. Create a build directory and compile with optimizations:
    ```bash
    mkdir -p build
    cd build
-   cmake ..
-   make -j 4
+   cmake .. -DCMAKE_BUILD_TYPE=Release -DKENLM_MAX_ORDER=7
+   make -j$(nproc)
    ```
+   Note: The `-DKENLM_MAX_ORDER=7` flag sets the maximum n-gram order to 7. Adjust this value if you need a different maximum order, but ensure it matches the `MAX_ORDER` used in the Python module installation.
 
-3. To use KenLM as a Python module:
-   ```bash
-   pip install https://github.com/kpu/kenlm/archive/master.zip
-   ```
-   Note: When installing via pip, you can set the `MAX_ORDER` environment variable to control the max order with which KenLM is built. This is essential to run the analysis for more than 6 character grams. If you run into difficulties compiling it, then default to 6.
+3. Add the KenLM `build` directory to your system PATH or update your project's configuration to point to the KenLM installation directory.
 
-4. Add the KenLM `build` directory to your system PATH or update your project's configuration to point to the KenLM installation directory.
-
-For more detailed information on usage refer to the [KenLM GitHub repository](https://github.com/kpu/kenlm) and the [official KenLM website](https://kheafield.com/code/kenlm/).
+For more detailed information on KenLM usage, refer to the [KenLM GitHub repository](https://github.com/kpu/kenlm) and the [official KenLM website](https://kheafield.com/code/kenlm/).
 
 ## Usage
 
 The main scripts for this project are located in the `main` directory. There are two primary scripts you can run:
 
-1. `qgram_type.py` (Main script):
-   This script runs the analysis on word types.
-
-2. `qgram_token.py`:
-   This script is similar to `qgram_type.py` but runs the analysis on all words (tokens) instead of just word types.
-
 ### Running Experiments with qgram_type.py
 
-The `qgram_type.py` script is the main script for running q-gram analysis on word types. You can modify various parameters in the `Config` class to run different experiments.
+The `qgram_type.py` script is the main script for running q-gram analysis on word types. To run an experiment:
+
+1. Open `qgram_type.py` in a text editor.
+2. Locate the `Config` class and modify the desired values in the `_set_values` method.
+3. Save the file.
+4. Run the script from the command line:
+   ```bash
+   python main/qgram_type.py
+   ```
 
 #### Changing Configuration Values
 
@@ -96,25 +104,12 @@ To run experiments with different settings, modify the following values in the `
 1. `self.seed`: Set the random seed for reproducibility (default: 42)
 2. `self.q_range`: Set the range of q-gram sizes to analyze [min, max] (default: [7, 7])
 3. `self.split_config`: Set the train-test split ratio (default: 0.5)
-4. `self.vowel_replacement_ratio`: Set the ratio of vowels to replace (default: 0.2) # Vowel and Consonant ratio must sum to 1.0
-5. `self.consonant_replacement_ratio`: Set the ratio of consonants to replace (default: 0.8) # Vowel and Consonant ratio must sum to 1.0
+4. `self.vowel_replacement_ratio`: Set the ratio of vowels to replace (default: 0.2)
+5. `self.consonant_replacement_ratio`: Set the ratio of consonants to replace (default: 0.8)
 6. `self.min_word_length`: Set the minimum word length to consider (default: 3)
 7. `self.prediction_method_name`: Set the prediction method to use (default: 'context_sensitive')
 8. `self.num_replacements`: Set the number of character replacements (default: 1)
 9. `self.log_level`: Set the logging level (default: logging.INFO)
-
-#### Running the Script
-
-To run the script with modified values:
-
-1. Open `qgram_type.py` in a text editor.
-2. Locate the `Config` class and modify the desired values in the `_set_values` method.
-3. Save the file.
-4. Run the script from the command line:
-
-```bash
-python main/qgram_type.py
-```
 
 #### Experiment Examples
 
@@ -146,62 +141,18 @@ Here are some example modifications you can make to run different experiments:
    self.num_replacements = 2  # This will replace 2 characters instead of 1
    ```
 
-#### Analyzing Results
+### Running Experiments with qgram_token.py
 
-After running the script:
+The `qgram_token.py` script is similar to `qgram_type.py` but runs the analysis on all words (tokens) instead of just word types. Use this script when you need to analyze all word occurrences rather than unique word types. The configuration and usage are similar to `qgram_type.py`.
+
+### Analyzing Results
+
+After running either script:
 
 1. Check the console output for immediate results.
 2. Examine the log file in the `data/logs` directory for detailed information.
 3. Review the CSV files in the `data/outputs/csv` directory for prediction details.
 4. Check the text files in the `data/outputs/texts` directory for summary statistics.
-
-### Additional Notes
-
-- `qgram_type.py` is the primary script for this project and should be used for most analyses.
-- Use `qgram_token.py` when you need to analyze all word occurrences rather than just unique word types.
-- Ensure that all necessary data files and dependencies are in place before running the scripts.
-- You may need to adjust parameters or input files within the scripts depending on your specific analysis needs.
-
-If you encounter any issues or need to modify the analysis, refer to the comments within each script for guidance on customization and troubleshooting.
-
-Remember to document any changes you make to the configuration when reporting your results to ensure reproducibility of your experiments.
-
-## Large Files
-
-This repository uses Git LFS to handle large files. The following file types are tracked by Git LFS:
-
-- Text files in the corpora directory (`main/data/corpora/*.txt`)
-
-The following file types are excluded using `.gitignore`:
-
-- KenLM models (`*.klm`)
-- ARPA files (`*.arpa`)
-- PNG files (`*.png`)
-- CSV files (`*.csv`)
-
-### Removing Large Files from History
-
-If you need to remove large files from the repository history:
-
-1. Install `git-filter-repo`:
-   ```bash
-   pip install git-filter-repo
-   ```
-
-2. Remove specific files:
-   ```bash
-   git filter-repo --path main/data/corpora/all_tokens_clmet.txt --path main/data/corpora/all_tokens_openEdges.txt --invert-paths --force
-   ```
-
-## Managing Dependencies
-
-This project uses `pip` for package management. To update dependencies:
-
-1. Ensure your virtual environment is activated.
-2. Update dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
 
 ## Project Structure
 
@@ -254,15 +205,81 @@ thesis/
 The analysis directory contains scripts for various data analysis tasks. Before running any analysis, ensure the data is formatted correctly by first executing `1_DATA_CLEANER.py`.
 
 - `1_DATA_CLEANER.py`: Cleans and prepares raw data for further analysis. This script must be run first.
-
-#### Modeling and Analysis:
 - `GAMs_model.py`: Fits and analyzes Generalized Additive Models (GAMs).
 - `randomforest.py`: Trains and evaluates Random Forest models.
-
-#### Data Visualization and Plotting:
 - `histogram_confidences.py`: Creates histograms of confidence scores for predictions.
-- `letter_index_plot.py`: Plots related to the position of letters
+- `letter_index_plot.py`: Plots related to the position of letters.
+- Other scripts perform various analyses and generate visualizations for the project.
+
+## Large Files and Dependencies
+
+This repository uses Git LFS to handle large files. The following file types are tracked by Git LFS:
+
+- Text files in the corpora directory (`main/data/corpora/*.txt`)
+
+The following file types are excluded using `.gitignore`:
+
+- KenLM models (`*.klm`)
+- ARPA files (`*.arpa`)
+- PNG files (`*.png`)
+- CSV files (`*.csv`)
+
+To update dependencies:
+
+1. Ensure your virtual environment is activated.
+2. Run:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### Removing Large Files from History
+
+If you need to remove large files from the repository history:
+
+1. Install `git-filter-repo`:
+   ```bash
+   pip install git-filter-repo
+   ```
+
+2. Remove specific files:
+   ```bash
+   git filter-repo --path main/data/corpora/large_file.txt --invert-paths --force
+   ```
+
+## Troubleshooting
+
+If you encounter issues:
+
+1. Ensure all prerequisites are correctly installed and up to date.
+2. Check that KenLM is properly set up and accessible. Verify that the `KENLM_MAX_ORDER` used in compilation matches the one used for the Python module installation.
+3. Verify that input data files are in the correct locations within the `main/data/corpora/` directory.
+4. Check the log files in the `data/logs` directory for detailed error messages and stack traces.
+5. Ensure your Python virtual environment is correctly activated and all dependencies are installed.
+6. If you're having issues with specific analyses, try running the `1_DATA_CLEANER.py` script again to ensure your data is properly formatted.
+
+For persistent problems, please open an issue on the GitHub repository with a detailed description of the error, steps to reproduce it, and relevant parts of the log files.
+
+## Contributing
+
+Contributions to improve the project are welcome. Please follow these steps:
+
+1. Fork the repository.
+2. Create a new branch for your feature or bug fix.
+3. Make your changes and commit them with clear, descriptive commit messages.
+4. Push to your fork and submit a pull request.
+
+Please ensure your code adheres to the project's coding standards:
+- Follow PEP 8 guidelines for Python code style.
+- Write clear, self-documenting code with appropriate comments where necessary.
+- Include docstrings for all functions, classes, and modules.
+- Add or update unit tests for any new or modified functionality.
+- Update the documentation, including this README, if your changes affect project setup or usage.
+
+When contributing, please also consider:
+- The impact of your changes on the overall project structure and design.
+- Performance implications, especially for computationally intensive parts of the code.
+- Backward compatibility with existing data and analysis scripts.
 
 ## License
 
-This project is licensed under the [MIT License](https://opensource.org/licenses/MIT). See the [LICENSE](LICENSE) file for details.
+This project is licensed under the [MIT License](https://opensource.org/licenses/MIT). See the [LICENSE](LICENSE) file for the full license text.

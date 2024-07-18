@@ -1,0 +1,10 @@
+matplotlib
+nltk
+numpy
+pandas
+regex
+scipy
+seaborn
+scikit-learn
+statsmodels
+tabulate
