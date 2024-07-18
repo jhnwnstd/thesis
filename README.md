@@ -253,15 +253,15 @@ thesis/
 ### Analysis Directory
 The analysis directory contains scripts for various data analysis tasks. Before running any analysis, ensure the data is formatted correctly by first executing `1_DATA_CLEANER.py`.
 
-- 1_DATA_CLEANER.py: Cleans and prepares raw data for further analysis. This script must be run first.
+- `1_DATA_CLEANER.py`: Cleans and prepares raw data for further analysis. This script must be run first.
 
 #### Modeling and Analysis:
-- GAMs_model.py: Fits and analyzes Generalized Additive Models (GAMs).
-- randomforest.py: Trains and evaluates Random Forest models.
+- `GAMs_model.py`: Fits and analyzes Generalized Additive Models (GAMs).
+- `randomforest.py`: Trains and evaluates Random Forest models.
 
 #### Data Visualization and Plotting:
-- histogram_confidences.py: Creates histograms of confidence scores for predictions.
-- letter_index_plot.py: Plots related to the position of letters
+- `histogram_confidences.py`: Creates histograms of confidence scores for predictions.
+- `letter_index_plot.py`: Plots related to the position of letters
 
 ## License
 
