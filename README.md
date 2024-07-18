@@ -211,7 +211,7 @@ The analysis directory contains scripts for various data analysis tasks. Before 
 - `letter_index_plot.py`: Plots related to the position of letters.
 - Other scripts perform various analyses and generate visualizations for the project.
 
-## Large Files
+## Large and Exlcuded Files
 
 This repository uses Git LFS to handle large files. The following file types are tracked by Git LFS:
 
