@@ -1,5 +1,3 @@
-### This version of the script generates word lists that maintain the original number of the tokens in the training list rather than turning it into a list of unique tokens
-
 import logging
 import random
 import regex as reg
@@ -7,6 +5,7 @@ import subprocess
 from collections import Counter
 from enum import Enum
 from pathlib import Path
+from typing import List, Callable, Tuple
 
 import kenlm
 import nltk
@@ -21,16 +20,16 @@ class Letters(Enum):
     CONSONANTS = 'bcdfghjklmnpqrstvwxzȝ'
 
     @staticmethod
-    def is_vowel(char):
+    def is_vowel(char: str) -> bool:
         """Check if a character is a vowel."""
         return char in Letters.VOWELS.value
 
     @staticmethod
-    def is_consonant(char):
+    def is_consonant(char: str) -> bool:
         """Check if a character is a consonant."""
         return char in Letters.CONSONANTS.value
 
-def build_kenlm_model(corpus_name, q, corpus_path, model_directory) -> tuple[int, str]:
+def build_kenlm_model(corpus_name: str, q: int, corpus_path: Path, model_directory: Path) -> Tuple[int, str]:
     """
     Builds KenLM language models for specified q-gram sizes.
     Generates an ARPA file and then converts it to a binary format for efficiency.
@@ -60,7 +59,7 @@ def build_kenlm_model(corpus_name, q, corpus_path, model_directory) -> tuple[int
 
     return q, str(binary_file)
 
-def run_command(command, error_message):
+def run_command(command: List[str], error_message: str) -> bool:
     """
     Executes a command as a subprocess and logs any errors encountered.
 
@@ -81,7 +80,7 @@ def run_command(command, error_message):
 class Config:
     """Configuration class for language model testing parameters."""
 
-    def __init__(self, base_dir=None):
+    def __init__(self, base_dir: str = None):
         """
         Initialize the Config object with default values and directory structures.
 
@@ -102,6 +101,10 @@ class Config:
         self.text_dir = self.output_dir / 'texts'
         self.csv_dir = self.output_dir / 'csv'
         self.sets_dir = self.output_dir / 'sets'
+        self.directories = [
+            self.data_dir, self.model_dir, self.log_dir, self.corpus_dir,
+            self.output_dir, self.sets_dir, self.text_dir, self.csv_dir
+        ]
 
     def _set_default_values(self):
         """Set default values for configuration parameters."""
@@ -119,19 +122,19 @@ class Config:
         """Set up logging with file and console handlers."""
         self.log_dir.mkdir(parents=True, exist_ok=True)
         logfile = self.log_dir / 'logfile.log'
-        file_handler = logging.FileHandler(logfile, mode='a')
-        file_format = logging.Formatter('%(asctime)s - %(message)s')
-        file_handler.setFormatter(file_format)
-        console_handler = logging.StreamHandler()
-        console_format = logging.Formatter('%(message)s')
-        console_handler.setFormatter(console_format)
-        logging.basicConfig(level=self.log_level, handlers=[file_handler, console_handler])
+        logging.basicConfig(
+            level=self.log_level,
+            format='%(asctime)s - %(message)s',
+            handlers=[
+                logging.FileHandler(logfile, mode='a'),
+                logging.StreamHandler()
+            ]
+        )
 
     def create_directories(self):
         """Create necessary directories if they don't exist."""
-        for directory in [self.data_dir, self.model_dir, self.log_dir, self.corpus_dir, 
-                          self.output_dir, self.sets_dir, self.text_dir, self.csv_dir]:
-            directory.mkdir(exist_ok=True)
+        for directory in self.directories:
+            directory.mkdir(parents=True, exist_ok=True)
 
 class CorpusManager:
     """Manages corpus data, including loading, cleaning, splitting, and model generation."""
@@ -140,17 +143,17 @@ class CorpusManager:
     corpora_tokens = []  # List to store all words across corpora
 
     @staticmethod
-    def add_to_global_corpus(words):
+    def add_to_global_corpus(words: List[str]):
         """Add words to the global corpus list."""
         CorpusManager.corpora_tokens.extend(words)
 
     @staticmethod
-    def format_corpus_name(corpus_name) -> str:
+    def format_corpus_name(corpus_name: str) -> str:
         """Format the corpus name by removing redundant parts and file extensions."""
         parts = corpus_name.replace('.txt', '').split('_')
         return parts[0] if len(parts) > 1 and parts[0] == parts[1] else corpus_name.replace('.txt', '')
 
-    def __init__(self, corpus_name, config, split_type='A', debug=True):
+    def __init__(self, corpus_name: str, config: Config, split_type: str = 'A', debug: bool = True):
         """
         Initialize the CorpusManager with a specific corpus and configuration.
 
@@ -177,7 +180,7 @@ class CorpusManager:
         """Extract all unique characters from the corpus."""
         return {char for word in self.corpus for char in word}
 
-    def clean_text(self, text: str) -> list[str]:
+    def clean_text(self, text: str) -> List[str]:
         """
         Clean the input text by extracting words, converting to lowercase,
         and filtering based on minimum word length.
@@ -347,28 +350,28 @@ class CorpusManager:
             self.save_list_to_file(self.train_set, f'{self.corpus_name}_train_list_b.txt')
             self.save_list_to_file(self.test_set, f'{self.corpus_name}_test_list_b.txt')
 
-    def generate_formatted_corpus(self, data_set, formatted_corpus_path) -> Path:
-            """
-            Generate a formatted corpus file for KenLM training.
+    def generate_formatted_corpus(self, data_set: List[str], formatted_corpus_path: Path) -> Path:
+        """
+        Generate a formatted corpus file for KenLM training.
 
-            Args:
-                data_set (list): List of words to be formatted.
-                formatted_corpus_path (Path): Path where the formatted corpus will be saved.
+        Args:
+            data_set (list): List of words to be formatted.
+            formatted_corpus_path (Path): Path where the formatted corpus will be saved.
 
-            Returns:
-                Path: Path to the generated formatted corpus file.
-            """
-            # Prepare a corpus file formatted for KenLM training, with each word on a new line
-            formatted_text = [' '.join(word) for word in data_set]
-            formatted_corpus = '\n'.join(formatted_text)
+        Returns:
+            Path: Path to the generated formatted corpus file.
+        """
+        # Prepare a corpus file formatted for KenLM training, with each word on a new line
+        formatted_text = [' '.join(word) for word in data_set]
+        formatted_corpus = '\n'.join(formatted_text)
 
-            # Save the formatted corpus to a file
-            with formatted_corpus_path.open('w', encoding='utf-8') as f:
-                f.write(formatted_corpus)
+        # Save the formatted corpus to a file
+        with formatted_corpus_path.open('w', encoding='utf-8') as f:
+            f.write(formatted_corpus)
 
-            return formatted_corpus_path
+        return formatted_corpus_path
 
-    def generate_models_from_corpus(self, corpus_path):
+    def generate_models_from_corpus(self, corpus_path: Path):
         """
         Generate KenLM models for different q-gram sizes from the corpus.
 
@@ -402,7 +405,7 @@ class CorpusManager:
                 self.generate_formatted_corpus(self.train_set, formatted_train_set_path)
                 self.generate_models_from_corpus(formatted_train_set_path)
 
-    def replace_random_letter(self, word, used_combinations) -> tuple[str, str, str]:
+    def replace_random_letter(self, word: str, used_combinations: set) -> Tuple[str, str, str]:
         """
         Replace a random letter in the word with an underscore, avoiding previously used combinations.
 
@@ -435,7 +438,7 @@ class CorpusManager:
 
         return modified_word, missing_letter, word
 
-    def save_list_to_file(self, data_list, file_name):
+    def save_list_to_file(self, data_list: List, file_name: str):
         """
         Save a list of data to a file, formatting tuples appropriately.
 
@@ -463,7 +466,7 @@ class CorpusManager:
         with file_path.open('w', encoding='utf-8', buffering=8192) as file:  # 8192 bytes buffer size
             file.write(aggregated_data_str)
 
-def analyze_test_tokens_not_in_training_performance(corpus_manager, test_tokens):
+def analyze_test_tokens_not_in_training_performance(corpus_manager: CorpusManager, test_tokens: set) -> int:
     """
     Analyze the performance of the model on test tokens that were not present in the training data.
 
@@ -504,7 +507,7 @@ def analyze_test_tokens_not_in_training_performance(corpus_manager, test_tokens)
 
     return num_analyzed_tokens
 
-def log_evaluation_results(evaluation_metrics, corpus_name, prediction_method_name):
+def log_evaluation_results(evaluation_metrics: dict, corpus_name: str, prediction_method_name: str):
     """
     Log the evaluation results for a given corpus and prediction method.
 
@@ -520,7 +523,7 @@ def log_evaluation_results(evaluation_metrics, corpus_name, prediction_method_na
         validity = evaluation_metrics['validity'].get(i, 0.0)
         logging.info(f'TOP{i} ACCURACY: {accuracy:.2%} | TOP{i} VALIDITY: {validity:.2%}')
 
-def run(corpus_name, config, split_type):
+def run(corpus_name: str, config: Config, split_type: str):
     """
     Run the evaluation process for a given corpus and split type.
 

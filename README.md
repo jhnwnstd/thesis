@@ -183,8 +183,8 @@ thesis/
 │ ├── corpus_class.py
 │ ├── evaluation_class.py
 │ ├── predictions_class.py
-│ ├── qgram_token.py
-│ └── qgram_type.py        # main script to run
+│ ├── qgram_token.py          # Secondary script for token frequency analysis
+│ └── qgram_type.py           # Main script
 ├── .gitattributes
 ├── .gitignore
 ├── LICENSE
