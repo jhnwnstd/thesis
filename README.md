@@ -54,7 +54,7 @@ Follow these steps to set up the project environment:
 
 3. Install KenLM as a Python module:
    ```bash
-   export MAX_ORDER=7 
+   export MAX_ORDER=7 # change this value to whatever you used during KenLM compilation
    pip install https://github.com/kpu/kenlm/archive/master.zip
    ```
    Note: The `MAX_ORDER` environment variable controls the maximum n-gram order. Adjust this value if needed, but ensure it matches the value used in KenLM compilation (see next section).
@@ -73,7 +73,7 @@ This project heavily relies on KenLM, a fast and efficient language model toolki
    ```bash
    mkdir -p build
    cd build
-   cmake .. -DCMAKE_BUILD_TYPE=Release -DKENLM_MAX_ORDER=7
+   cmake .. -DCMAKE_BUILD_TYPE=Release -DKENLM_MAX_ORDER=7 # Adjust the MAX_ORDER value to whatever n-gram order maximum you want
    make -j$(nproc)
    ```
    Note: The `-DKENLM_MAX_ORDER=7` flag sets the maximum n-gram order to 7. Adjust this value if you need a different maximum order, but ensure it matches the `MAX_ORDER` used in the Python module installation.
