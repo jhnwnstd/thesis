@@ -207,7 +207,21 @@ This project uses `pip` for package management. To update dependencies:
 
 ```
 thesis/
-├── csv_processing/
+├── analysis/
+│ ├── 1_DATA_CLEANER.py       # Must be run first before any analysis
+│ ├── GAMs_model.py
+│ ├── histogram_confidences.py
+│ ├── letter_accuracies.py
+│ ├── letter_index_plot.py
+│ ├── randomforest.py
+│ ├── vowel_or_consonant.py
+│ ├── bootstrap_confidences.py
+│ ├── heat_map.py
+│ ├── index_length_vowel.py
+│ ├── letter_importances.py
+│ ├── letter_index.py
+│ ├── totalvsaccruate.py
+│ ├── word_length.py
 ├── main/
 │ ├── data/
 │ │ ├── corpora/
@@ -219,7 +233,7 @@ thesis/
 │ ├── predictions_class.py
 │ ├── qgram_analysis.py
 │ ├── qgram_token.py
-│ └── qgram_type.py  # main script to run
+│ └── qgram_type.py        # main script to run
 ├── .gitattributes
 ├── .gitignore
 ├── LICENSE
@@ -235,6 +249,19 @@ thesis/
 - `qgram_analysis.py`: Provides utility functions for q-gram analysis.
 - `qgram_token.py`: Performs q-gram analysis on all words (tokens) in the corpus.
 - `qgram_type.py`: Performs q-gram analysis on unique word types in the corpus.
+
+### Analysis Directory
+The analysis directory contains scripts for various data analysis tasks. Before running any analysis, ensure the data is formatted correctly by first executing `1_DATA_CLEANER.py`.
+
+- 1_DATA_CLEANER.py: Cleans and prepares raw data for further analysis. This script must be run first.
+
+#### Modeling and Analysis:
+- GAMs_model.py: Fits and analyzes Generalized Additive Models (GAMs).
+- randomforest.py: Trains and evaluates Random Forest models.
+
+#### Data Visualization and Plotting:
+- histogram_confidences.py: Creates histograms of confidence scores for predictions.
+- letter_index_plot.py: Plots related to the position of letters
 
 ## License
 
