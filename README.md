@@ -211,7 +211,7 @@ The analysis directory contains scripts for various data analysis tasks. Before 
 - `letter_index_plot.py`: Plots related to the position of letters.
 - Other scripts perform various analyses and generate visualizations for the project.
 
-## Large Files and Dependencies
+## Large Files
 
 This repository uses Git LFS to handle large files. The following file types are tracked by Git LFS:
 
@@ -223,28 +223,6 @@ The following file types are excluded using `.gitignore`:
 - ARPA files (`*.arpa`)
 - PNG files (`*.png`)
 - CSV files (`*.csv`)
-
-To update dependencies:
-
-1. Ensure your virtual environment is activated.
-2. Run:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-### Removing Large Files from History
-
-If you need to remove large files from the repository history:
-
-1. Install `git-filter-repo`:
-   ```bash
-   pip install git-filter-repo
-   ```
-
-2. Remove specific files:
-   ```bash
-   git filter-repo --path main/data/corpora/large_file.txt --invert-paths --force
-   ```
 
 ## Troubleshooting
 
@@ -258,27 +236,6 @@ If you encounter issues:
 6. If you're having issues with specific analyses, try running the `1_DATA_CLEANER.py` script again to ensure your data is properly formatted.
 
 For persistent problems, please open an issue on the GitHub repository with a detailed description of the error, steps to reproduce it, and relevant parts of the log files.
-
-## Contributing
-
-Contributions to improve the project are welcome. Please follow these steps:
-
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix.
-3. Make your changes and commit them with clear, descriptive commit messages.
-4. Push to your fork and submit a pull request.
-
-Please ensure your code adheres to the project's coding standards:
-- Follow PEP 8 guidelines for Python code style.
-- Write clear, self-documenting code with appropriate comments where necessary.
-- Include docstrings for all functions, classes, and modules.
-- Add or update unit tests for any new or modified functionality.
-- Update the documentation, including this README, if your changes affect project setup or usage.
-
-When contributing, please also consider:
-- The impact of your changes on the overall project structure and design.
-- Performance implications, especially for computationally intensive parts of the code.
-- Backward compatibility with existing data and analysis scripts.
 
 ## License
 
