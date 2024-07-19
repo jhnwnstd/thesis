@@ -5,7 +5,7 @@ import subprocess
 from collections import Counter
 from enum import Enum
 from pathlib import Path
-from typing import List, Callable, Tuple
+from typing import List, Tuple
 
 import kenlm
 import nltk
