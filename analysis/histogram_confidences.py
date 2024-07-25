@@ -19,7 +19,7 @@ DATASET_PATHS: Dict[str, str] = {
     "Brown": 'main/data/outputs/csv/brown_context_sensitive_split0.5_qrange7-7_prediction.csv'
 }
 
-def load_dataset(args: Tuple[str, str]) -> Tuple[str, Optional[pd.DataFrame]]:
+def load_dataset(args: Tuple[str, str]) -> Tuple[str, Optional[pd.DataFrame]]: 
     """Loads dataset from the given path, handling errors."""
     name, path = args
     try:
@@ -66,12 +66,15 @@ def plot_normalized_stacked_histogram(ax: plt.Axes, dataset: pd.DataFrame, valid
                     arrowprops=dict(facecolor='black', shrink=0.05), fontsize=16, color='black', fontweight='bold')
         ax.plot([], [], color='black', linestyle='--', label=f'Threshold at {threshold*100:.0f}%')
 
-    ax.bar(bins[:-1], valid_proportions, width=np.diff(bins), align='edge', color=valid_color, alpha=0.75, label='Valid' if column_name == "Top1_Is_Valid" else 'Accurate')
-    ax.bar(bins[:-1], invalid_proportions, width=np.diff(bins), align='edge', color=invalid_color, alpha=0.65, label='Invalid' if column_name == "Top1_Is_Valid" else 'Inaccurate', bottom=valid_proportions)
+    label_valid = 'Valid' if column_name == "Top1_Is_Valid" else 'Accurate'
+    label_invalid = 'Invalid' if column_name == "Top1_Is_Valid" else 'Inaccurate'
+
+    ax.bar(bins[:-1], valid_proportions, width=np.diff(bins), align='edge', color=valid_color, alpha=0.75, label=label_valid)
+    ax.bar(bins[:-1], invalid_proportions, width=np.diff(bins), align='edge', color=invalid_color, alpha=0.65, label=label_invalid, bottom=valid_proportions)
     
     ax.set_xlabel('Top 1 Confidence', fontsize=14)
     ax.set_ylabel('Proportion', fontsize=14)
-    ax.set_title(f'{label} Dataset ({column_name.split("_")[-1].capitalize()})', fontsize=16, fontweight='bold')
+    ax.set_title(f'{label} Dataset ({label_valid})', fontsize=16, fontweight='bold')
     ax.legend(loc='best', fontsize=12)
     ax.grid(True, which='both', linestyle='--', linewidth=0.5)
     ax.minorticks_on()

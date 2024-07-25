@@ -80,13 +80,13 @@ class EvaluateModel:
         logging.info(f'Minimum Word Length: {self.config.min_word_length}')
         logging.info(f'Number of Replacements per Word: {self.config.num_replacements}')
 
-    def compute_metrics(self, predictions) -> dict:
+    def compute_metrics(self, predictions) -> dict[str, dict[int, float]]:
         """
         Compute accuracy and validity metrics for the predictions.
-        
+
         Args:
             predictions: List of prediction results for each test word.
-        
+
         Returns:
             A dictionary containing accuracy and validity metrics for top 1, 2, and 3 predictions.
         """
@@ -110,16 +110,14 @@ class EvaluateModel:
                     accuracy_counts[rank] += 1
 
             # Check validity: whether predictions result in valid words
-            valid_word_checked = [False] * 3
             for rank, (predicted_letter, _) in enumerate(all_predictions[:3], start=1):
-                if not valid_word_checked[rank-1]:
-                    reconstructed_word = modified_word.replace('_', predicted_letter, 1)
-                    if reconstructed_word in self.all_words:
-                        # Mark as valid for this and all higher ranks
-                        for i in range(rank, 4):
-                            if not valid_word_checked[i-1]:
-                                validity_counts[i] += 1
-                                valid_word_checked[i-1] = True
+                reconstructed_word = modified_word.replace('_', predicted_letter, 1)
+                if reconstructed_word in self.all_words:
+                    validity_counts[rank] += 1
+                    # If a valid word is found, it counts for all higher ranks as well
+                    for higher_rank in range(rank + 1, 4):
+                        validity_counts[higher_rank] += 1
+                    break  # Stop checking after finding the first valid word
 
         # Calculate final metrics as percentages for easy interpretation
         total_accuracy = {k: accuracy_counts[k] / total_test_words for k in accuracy_counts}
