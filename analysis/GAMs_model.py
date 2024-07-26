@@ -25,80 +25,55 @@ DATASET_PATHS = {
 def load_data(filepath: Path) -> Optional[pd.DataFrame]:
     """Load data from a CSV file."""
     try:
-        # Attempt to read the CSV file
         data = pd.read_csv(filepath)
-        # Log success message
         logger.info(f"Data loaded successfully from {filepath}")
-        # Return the loaded data
         return data
     except FileNotFoundError:
-        # Log error message if file is not found
         logger.error(f"File not found: {filepath}")
-        # Return None to indicate failure
         return None
 
 def prepare_data(data: pd.DataFrame) -> Optional[pd.DataFrame]:
     """Prepare data by calculating word length and normalized missing letter index."""
-    
-    # Define the columns that are required for the analysis
     required_columns = {'Top1_Is_Accurate', 'Tested_Word'}
     
-    # Check if the required columns are present in the dataframe
-    if not required_columns.issubset(data.columns):
-        logger.error("Required columns are missing")
-        return None  # Return None if required columns are missing
+    missing_columns = required_columns - set(data.columns)
+    if missing_columns:
+        logger.error(f"Required columns are missing: {missing_columns}")
+        return None
 
-    # Calculate the length of each word in the 'Tested_Word' column
     data['Word_Length'] = data['Tested_Word'].str.len()
-
-    # Calculate the normalized index of the missing letter
-    # Find the index of '_' in each word and divide by (word length - 1) to normalize
-    # This gives a value between 0 and 1, representing the relative position of the missing letter
     data['Normalized_Missing_Index'] = data['Tested_Word'].str.find('_') / (data['Word_Length'] - 1)
-
-    # Clean up the data by replacing infinity values with NaN (which can happen if word length is 1)
-    # and then dropping all rows with NaN values to keep only valid, computable data points
     data = data.replace({'Normalized_Missing_Index': {np.inf: np.nan, -np.inf: np.nan}}).dropna()
     
-    return data  # Return the cleaned and prepared dataframe
+    return data
 
 def fit_model(X: pd.DataFrame, y: pd.Series, n_splines: int = 15) -> Optional[LogisticGAM]:
     """Fit a logistic GAM model."""
     try:
-        # Create and fit the GAM model
         gam = LogisticGAM(s(0, n_splines=n_splines)).fit(X, y)
         logger.info("Model fitting complete")
         return gam
     except Exception as e:
-        # Log any errors that occur during model fitting
         logger.error(f"Error fitting model: {str(e)}")
         return None
 
 def plot_results(XX: np.ndarray, proba: np.ndarray, X: np.ndarray, y: np.ndarray, title: str, config: dict, output_path: Path):
     """Plot the results of the GAM model predictions against the actual data."""
-    # Create a new figure with specified size
     plt.figure(figsize=config['figsize'])
-    # Set the plot style
     sns.set_style("whitegrid")
-    # Plot the model prediction line
     plt.plot(XX, proba, label='Model Prediction', color=config['prediction_color'], linewidth=2)
-    # Scatter plot the actual data points
     plt.scatter(X, y, color=config['data_color'], alpha=0.7, label='Actual Data')
-    # Set labels and title
     plt.xlabel('Normalized Missing Index', fontsize=12)
     plt.ylabel('Prediction Accuracy', fontsize=12)
     plt.title(title, fontsize=14)
     plt.legend()
-    # Set x-axis ticks
     plt.xticks(np.arange(0, 1.1, 0.1), labels=[f"{tick:.1f}" for tick in np.arange(0, 1.1, 0.1)])
     
-    # Adjust y-axis range if dynamic_range is True
     if config['dynamic_range']:
         center_point = np.median(proba)
         margin = 0.30
         plt.ylim([max(0, center_point - margin), min(1, center_point + margin)])
     
-    # Adjust layout and save the plot
     plt.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(output_path)
@@ -115,34 +90,26 @@ def calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float
 
 def process_dataset(args: Tuple[str, Path, dict]) -> Optional[Tuple[str, np.ndarray, np.ndarray, np.ndarray, np.ndarray, Dict[str, float]]]:
     """Process each dataset: load data, prepare it, fit the model, plot results, and calculate metrics."""
-    # Unpack arguments
     name, path, config = args
-    # Load the data
     data = load_data(path)
     if data is None:
         return None
 
-    # Prepare the data
     prepared_data = prepare_data(data)
     if prepared_data is None:
         return None
 
-    # Extract features and target
     X = prepared_data[['Normalized_Missing_Index']]
     y = prepared_data['Top1_Is_Accurate']
-    # Fit the GAM model
     gam = fit_model(X, y)
     if gam is None:
         return None
 
-    # Generate points for plotting the model prediction
     XX = np.linspace(0, 1, 1000)[:, None]
     proba = gam.predict_proba(XX)
-    # Plot and save results
     output_path = Path('output/gams') / f"{name}_GAM_df.png"
     plot_results(XX.ravel(), proba, X.to_numpy().ravel(), y, f'Effect of Normalized Missing Index on Prediction Accuracy in {name}', config, output_path)
 
-    # Calculate performance metrics
     y_pred = gam.predict(X) > 0.5
     metrics = calculate_metrics(y, y_pred)
 
@@ -150,52 +117,45 @@ def process_dataset(args: Tuple[str, Path, dict]) -> Optional[Tuple[str, np.ndar
 
 def plot_all_datasets(datasets: Dict[str, Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]], config: dict, output_path: Path):
     """Plot the results of all datasets on a single graph."""
-    # Create a new figure with specified size
     plt.figure(figsize=config['figsize'])
-    # Set the plot style
     sns.set_style("whitegrid")
     
-    # Plot each dataset
     for name, (X, y, XX, proba) in datasets.items():
         plt.plot(XX, proba, label=f'{name} Model Prediction', linewidth=2)
         plt.scatter(X, y, alpha=0.7, label=f'{name} Actual Data')
     
-    # Set labels and title
     plt.xlabel('Normalized Missing Index', fontsize=12)
     plt.ylabel('Prediction Accuracy', fontsize=12)
     plt.title('Effect of Normalized Missing Index on Prediction Accuracy across Datasets', fontsize=14)
     plt.legend()
-    # Set x-axis ticks
     plt.xticks(np.arange(0, 1.1, 0.1), labels=[f"{tick:.1f}" for tick in np.arange(0, 1.1, 0.1)])
-    # Adjust layout and save the plot
     plt.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(output_path)
     plt.close()
 
 def process_combined_dataset(datasets: Dict[str, Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]], config: dict) -> Optional[Dict[str, float]]:
     """Process all datasets, combine them, fit a single model, plot the results, and return metrics."""
-    # Combine X and y from all datasets
+    if not datasets:
+        logger.error("No datasets to combine")
+        return None
+    
     combined_X = np.concatenate([X for X, _, _, _ in datasets.values()])
     combined_y = np.concatenate([y for _, y, _, _ in datasets.values()])
     
-    # Fit the GAM model on combined data
     gam = fit_model(combined_X.reshape(-1, 1), combined_y)
     if gam is None:
         return None
 
-    # Generate points for plotting the model prediction
     XX = np.linspace(0, 1, 1000)[:, None]
     proba = gam.predict_proba(XX)
-    # Plot and save results
     output_path = Path('output/gams/combined_dataset_GAM_df.png')
     plot_results(XX.ravel(), proba, combined_X, combined_y, 'Effect of Normalized Missing Index on Prediction Accuracy for Combined Dataset', config, output_path)
 
-    # Calculate performance metrics
     y_pred = gam.predict(combined_X.reshape(-1, 1)) > 0.5
     return calculate_metrics(combined_y, y_pred)
 
 def main():
-    # Define default plot configuration
     default_plot_config = {
         'figsize': (14, 8),
         'prediction_color': 'blue',
@@ -203,13 +163,10 @@ def main():
         'dynamic_range': True
     }
 
-    # Process individual datasets in parallel
     with ProcessPoolExecutor() as executor:
-        # Submit tasks for each dataset
         futures = [executor.submit(process_dataset, (name, path, default_plot_config)) for name, path in DATASET_PATHS.items()]
         datasets = {}
         all_metrics = {}
-        # Collect results as they complete
         for future in as_completed(futures):
             result = future.result()
             if result:
@@ -217,13 +174,10 @@ def main():
                 datasets[name] = (X, y, XX, proba)
                 all_metrics[name] = metrics
 
-    # Process and plot all datasets together
     plot_all_datasets(datasets, default_plot_config, Path('output/gams/all_datasets_GAM_df.png'))
 
-    # Process and plot the combined dataset
     combined_metrics = process_combined_dataset(datasets, default_plot_config)
 
-    # Print metrics for all datasets and the combined dataset
     for name, metrics in all_metrics.items():
         print(f"\nMetrics for {name}:")
         for metric, value in metrics.items():

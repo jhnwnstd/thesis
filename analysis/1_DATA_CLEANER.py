@@ -73,10 +73,10 @@ def clean_dataset(file_path):
         logger.info(f"Read {len(df)} rows from {file_path.name}")
 
         # Rename columns as needed
-        df = rename_columns(df, {'# Tested_Word': 'Tested_word'})
+        df = rename_columns(df, {'# Tested_Word': 'Tested_Word'})
 
         # Perform standard cleaning operations
-        df = standardize_text_columns(df, ['Tested_word', 'Original_Word'])
+        df = standardize_text_columns(df, ['Tested_Word', 'Original_Word'])
         df = drop_null_values(df, 'Original_Word')
         boolean_columns = ['In_Training_Set'] + [f'Top{i}_Is_Valid' for i in range(1, 4)] + [f'Top{i}_Is_Accurate' for i in range(1, 4)]
         df = convert_columns(df, boolean_columns, bool)
