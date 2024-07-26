@@ -4,7 +4,6 @@ import numpy as np
 from pathlib import Path
 import logging
 from typing import Dict, Tuple, Optional, List
-from concurrent.futures import ProcessPoolExecutor, as_completed
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -51,7 +50,7 @@ def plot_histogram(ax: plt.Axes, dataset: pd.DataFrame, valid_color: str, invali
         ax.text(0.5, 0.5, 'Data Unavailable', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, fontsize=16)
         return
 
-    bins = np.linspace(0, 1, bins + 1)
+    bins = np.linspace(0.1, 1, bins + 1)
     valid_proportions, invalid_proportions = calculate_histogram_data(dataset, column_name, bins)
     
     threshold_bin_indices = np.where(valid_proportions >= threshold)[0]
@@ -118,13 +117,11 @@ def save_figures(figures: List[plt.Figure], filename: str) -> None:
 def main():
     plt.style.use('seaborn-v0_8-colorblind')
 
-    with ProcessPoolExecutor() as executor:
-        future_to_dataset = {executor.submit(load_dataset, (name, path)): name for name, path in DATASET_PATHS.items()}
-        loaded_datasets = {}
-        for future in as_completed(future_to_dataset):
-            name, df = future.result()
-            if df is not None:
-                loaded_datasets[name] = df
+    loaded_datasets = {}
+    for name, path in DATASET_PATHS.items():
+        _, df = load_dataset((name, path))
+        if df is not None:
+            loaded_datasets[name] = df
 
     for column_name, filename in [("Top1_Is_Accurate", 'normalized_accurate_stacked_histograms'), 
                                   ("Top1_Is_Valid", 'normalized_valid_stacked_histograms')]:

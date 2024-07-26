@@ -42,8 +42,12 @@ def clean_dataframe(df):
     df.dropna(inplace=True)
     confidence_columns = [col for col in df.columns if 'Confidence' in col]
     df = convert_columns(df, confidence_columns, float)
-    df.drop_duplicates(inplace=True)
-    df = df[(df[confidence_columns] >= 0) & (df[confidence_columns] <= 1)].all(axis=1)
+    df = remove_duplicates(df)
+    
+    # Ensure confidence values are within [0, 1]
+    for col in confidence_columns:
+        df = df[(df[col] >= 0) & (df[col] <= 1)]
+
     df = remove_outliers_conservatively(df, confidence_columns)
     return df
 
@@ -58,7 +62,7 @@ def clean_dataset(file_path):
         df = convert_columns(df, boolean_columns, bool)
         df = convert_columns(df, ['Correct_Letter_Rank'], int)
         df = remove_duplicates(df)
-        predicted_letter_columns = [f'Top{i}_Predicted_Letter' for i in range(1, 4)]
+        predicted_letter_columns = [f'Top{i}_Predicted_Letter' for i in range(1, 3)]
         df = validate_predicted_letters(df, predicted_letter_columns)
         df = clean_dataframe(df)
         
@@ -78,7 +82,7 @@ def clean_dataset(file_path):
 
 def main():
     data_dir = Path('main/data/outputs/csv')
-    files_to_clean = [file_path for file_path in data_dir.glob('*.csv') if 'f1' not in file_path.stem]
+    files_to_clean = list(data_dir.glob('*.csv'))
 
     for file_path in files_to_clean:
         logger.info(f"Cleaning dataset: {file_path.name}")
