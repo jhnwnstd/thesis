@@ -1,14 +1,14 @@
 import pandas as pd
 from pathlib import Path
 import logging
+from scipy.stats import zscore
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
 
 def standardize_text_columns(df, columns):
-    for col in columns:
-        df[col] = df[col].str.lower().str.strip()
+    df[columns] = df[columns].apply(lambda x: x.str.lower().str.strip())
     return df
 
 def drop_null_values(df, column):
@@ -17,15 +17,8 @@ def drop_null_values(df, column):
     logger.info(f"Dropped rows with null '{column}'. New row count: {len(df)} (dropped {initial_count - len(df)} rows)")
     return df
 
-def convert_to_boolean(df, columns):
-    for col in columns:
-        if col in df.columns:
-            df[col] = df[col].astype(bool)
-    return df
-
-def convert_to_integer(df, column):
-    if column in df.columns:
-        df[column] = df[column].astype(int)
+def convert_columns(df, columns, dtype):
+    df[columns] = df[columns].astype(dtype)
     return df
 
 def remove_duplicates(df):
@@ -37,26 +30,21 @@ def remove_duplicates(df):
 
 def validate_predicted_letters(df, columns):
     for col in columns:
-        if col in df.columns:
-            df = df[df[col].apply(lambda x: isinstance(x, str) and len(x) == 1)]
+        df = df[df[col].apply(lambda x: isinstance(x, str) and len(x) == 1)]
     return df
 
+def remove_outliers_conservatively(df, columns, z_threshold=3):
+    z_scores = df[columns].apply(zscore)
+    df_cleaned = df[(z_scores < z_threshold).all(axis=1)]
+    return df_cleaned
+
 def clean_dataframe(df):
-    # Step 1: Identify and Handle Missing Values
-    df = df.dropna()
-
-    # Step 2: Ensure Correct Data Types
+    df.dropna(inplace=True)
     confidence_columns = [col for col in df.columns if 'Confidence' in col]
-    for col in confidence_columns:
-        df[col] = df[col].astype(float)
-
-    # Step 3: Remove Duplicate Rows
-    df = df.drop_duplicates()
-
-    # Step 4: Validate Predictions
-    for col in confidence_columns:
-        df = df[(df[col] >= 0) & (df[col] <= 1)]
-
+    df = convert_columns(df, confidence_columns, float)
+    df.drop_duplicates(inplace=True)
+    df = df[(df[confidence_columns] >= 0) & (df[confidence_columns] <= 1)].all(axis=1)
+    df = remove_outliers_conservatively(df, confidence_columns)
     return df
 
 def clean_dataset(file_path):
@@ -64,30 +52,16 @@ def clean_dataset(file_path):
         df = pd.read_csv(file_path)
         logger.info(f"Read dataset with {len(df)} rows from {file_path.name}")
 
-        # Standardize text columns
         df = standardize_text_columns(df, ['Tested_Word', 'Original_Word'])
-
-        # Drop rows with null 'Original_Word'
         df = drop_null_values(df, 'Original_Word')
-
-        # Convert specified columns to boolean
         boolean_columns = ['In_Training_Set'] + [f'Top{i}_Is_Valid' for i in range(1, 4)] + [f'Top{i}_Is_Accurate' for i in range(1, 4)]
-        df = convert_to_boolean(df, boolean_columns)
-
-        # Convert 'Correct_Letter_Rank' to integer
-        df = convert_to_integer(df, 'Correct_Letter_Rank')
-
-        # Remove duplicates
+        df = convert_columns(df, boolean_columns, bool)
+        df = convert_columns(df, ['Correct_Letter_Rank'], int)
         df = remove_duplicates(df)
-
-        # Validate predicted letters
         predicted_letter_columns = [f'Top{i}_Predicted_Letter' for i in range(1, 4)]
         df = validate_predicted_letters(df, predicted_letter_columns)
-
-        # Additional cleaning steps for confidence scores
         df = clean_dataframe(df)
-
-        # Save the cleaned dataset, overwriting the original file
+        
         df.to_csv(file_path, index=False)
         logger.info(f"Cleaned dataset overwritten at {file_path}.")
         
