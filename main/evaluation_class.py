@@ -1,7 +1,6 @@
 import numpy as np
-import csv
 import logging
-from io import StringIO
+import gzip
 from predictions_class import Predictions
 
 class EvaluateModel:
@@ -164,52 +163,52 @@ class EvaluateModel:
             predictions: List of detailed prediction results.
             prediction_method_name: Name of the prediction method used.
         """
+        # Define the output file path
         output_file_path = self.config.text_dir / f'{self.corpus_name}_predictions.txt'
+        
         try:
-            # Use a StringIO buffer for efficient string concatenation
-            buffer = StringIO()
+            # Open the file with a large buffer size for efficient writing
+            with output_file_path.open('w', encoding='utf-8', buffering=1024*1024) as file:
+                # Write general information about the evaluation
+                file.write(f'Prediction Method: {prediction_method_name}\n')
+                file.write(f'Unique Character Count: {self.unique_character_count}\n\n')
 
-            # Write general information about the evaluation
-            buffer.write(f'Prediction Method: {prediction_method_name}\n')
-            buffer.write(f'Unique Character Count: {self.unique_character_count}\n\n')
+                # Write accuracy and validity metrics for easy reference
+                accuracy = evaluation_metrics['accuracy']
+                validity = evaluation_metrics['validity']
+                for i in range(1, 4):
+                    file.write(f'TOP{i} ACCURACY: {accuracy[i]:.2%}\n')
+                    file.write(f'TOP{i} VALIDITY: {validity[i]:.2%}\n')
+                file.write('\n')
 
-            # Write accuracy and validity metrics for easy reference
-            accuracy = evaluation_metrics['accuracy']
-            validity = evaluation_metrics['validity']
-            for i in range(1, 4):
-                buffer.write(f'TOP{i} ACCURACY: {accuracy[i]:.2%}\n')
-                buffer.write(f'TOP{i} VALIDITY: {validity[i]:.2%}\n')
-            buffer.write('\n')
+                # Write dataset information for context
+                file.write(f'Train Size: {len(self.train_set)}, Test Size: {len(self.test_set)}\n')
+                file.write(f'Vowel Ratio: {self.config.vowel_replacement_ratio}, '
+                        f'Consonant Ratio: {self.config.consonant_replacement_ratio}\n\n')
 
-            # Write dataset information for context
-            buffer.write(f'Train Size: {len(self.train_set)}, Test Size: {len(self.test_set)}\n')
-            buffer.write(f'Vowel Ratio: {self.config.vowel_replacement_ratio}, '
-                         f'Consonant Ratio: {self.config.consonant_replacement_ratio}\n\n')
+                # Convert predictions to a NumPy array for faster processing
+                pred_array = np.array(predictions, dtype=object)
 
-            # Convert predictions to a NumPy array for faster processing
-            pred_array = np.array(predictions, dtype=object)
+                # Vectorize the 'in' operation for faster lookup of valid words
+                is_valid_word_vec = np.vectorize(lambda w: w in self.all_words)
 
-            # Vectorize the 'in' operation for faster lookup of valid words
-            is_valid_word_vec = np.vectorize(lambda w: w in self.all_words)
+                # Process each prediction
+                for mod_word, miss_letters, orig_word, top_preds, cor_letter_rank in pred_array:
+                    file.write(f'Test Word: {mod_word}, Correct Letters: {",".join(miss_letters)}\n')
+                    file.write(f'Correct Letter Rank: {cor_letter_rank}\n')
 
-            for mod_word, miss_letters, orig_word, top_preds, cor_letter_rank in pred_array:
-                buffer.write(f'Test Word: {mod_word}, Correct Letters: {",".join(miss_letters)}\n')
-                buffer.write(f'Correct Letter Rank: {cor_letter_rank}\n')
+                    # Prepare reconstructed words for validity check
+                    reconstructed_words = [mod_word.replace('_', pred[0]) for pred in top_preds]
+                    is_valid_words = is_valid_word_vec(reconstructed_words)
 
-                # Prepare reconstructed words for validation check
-                reconstructed_words = [mod_word.replace('_', pred[0]) for pred in top_preds]
-                is_valid_words = is_valid_word_vec(reconstructed_words)
+                    # Write top predictions and their validity
+                    for rank, ((pred_letter, confidence), is_valid) in enumerate(zip(top_preds, is_valid_words), start=1):
+                        file.write(f"Rank {rank}: '{pred_letter}' (Confidence: {confidence:.8f}), Valid: {is_valid}\n")
 
-                for rank, ((pred_letter, confidence), is_valid) in enumerate(zip(top_preds, is_valid_words), start=1):
-                    buffer.write(f"Rank {rank}: '{pred_letter}' (Confidence: {confidence:.8f}), Valid: {is_valid}\n")
-
-                buffer.write('\n')
-
-            # Write the entire buffer contents to file at once
-            with output_file_path.open('w', encoding='utf-8') as file:
-                file.write(buffer.getvalue())
-
+                    file.write('\n')
+        
         except Exception as e:
+            # Log any errors that occur during the file writing process
             logging.error(f"Error saving summary stats to {output_file_path}: {e}", exc_info=True)
 
     def export_prediction_details_to_csv(self, predictions, prediction_method_name):
@@ -220,13 +219,19 @@ class EvaluateModel:
             predictions: List of detailed prediction results.
             prediction_method_name: Name of the prediction method used.
         """
-        # Construct CSV file path with relevant details for easy identification
+        # Construct paths for the intermediate gzip file and the final CSV file
         split_type_str = f"_{self.split_type}" if self.split_type else ""
+        gzip_file_path = self.config.csv_dir / (
+            f'{self.corpus_name}_{prediction_method_name}{split_type_str}_split'
+            f'{self.config.split_config}_qrange{self.config.q_range[0]}-'
+            f'{self.config.q_range[1]}_prediction.csv.gz'
+        )
         csv_file_path = self.config.csv_dir / (
             f'{self.corpus_name}_{prediction_method_name}{split_type_str}_split'
             f'{self.config.split_config}_qrange{self.config.q_range[0]}-'
             f'{self.config.q_range[1]}_prediction.csv'
         )
+        
         try:
             # Convert predictions to a NumPy array for faster processing
             pred_array = np.array(predictions, dtype=object)
@@ -239,38 +244,51 @@ class EvaluateModel:
             is_valid_word_vec = np.vectorize(lambda w: w in all_words_set)
             is_in_training_set_vec = np.vectorize(lambda w: w in training_words_set)
 
-            with csv_file_path.open('w', newline='', encoding='utf-8') as file:
-                writer = csv.writer(file)
-                writer.writerow([
-                    'Tested_Word', 'Original_Word', 'Correct_Letter(s)', 
-                    'Top1_Predicted_Letter', 'Top1_Confidence', 'Top1_Is_Valid', 'Top1_Is_Accurate',
-                    'Top2_Predicted_Letter', 'Top2_Confidence', 'Top2_Is_Valid', 'Top2_Is_Accurate',
-                    'Top3_Predicted_Letter', 'Top3_Confidence', 'Top3_Is_Valid', 'Top3_Is_Accurate',
-                    'Correct_Letter_Rank', 'In_Training_Set'
+            # Extract data from prediction array for processing
+            mod_words, miss_letters, orig_words, top_preds, cor_letter_ranks = pred_array.T
+
+            # Prepare reconstructed words and validity checks
+            reconstructed_words = np.array([[mod.replace('_', pred[0]) for pred in preds] for mod, preds in zip(mod_words, top_preds)])
+            is_valid = is_valid_word_vec(reconstructed_words)
+            is_accurate = np.array([[pred[0] in miss for pred in preds] for miss, preds in zip(miss_letters, top_preds)])
+            in_training_set = is_in_training_set_vec(orig_words)
+
+            # Prepare data as a structured NumPy array
+            dtype = [('Tested_Word', 'U50'), ('Original_Word', 'U50'), ('Correct_Letters', 'U10')]
+            for i in range(1, 4):
+                dtype.extend([
+                    (f'Top{i}_Predicted_Letter', 'U1'),
+                    (f'Top{i}_Confidence', 'f8'),
+                    (f'Top{i}_Is_Valid', 'i4'),
+                    (f'Top{i}_Is_Accurate', 'i4')
                 ])
+            dtype.extend([('Correct_Letter_Rank', 'i4'), ('In_Training_Set', 'i4')])
 
-                # Extract data from prediction array
-                mod_words = pred_array[:, 0]
-                miss_letters = pred_array[:, 1]
-                orig_words = pred_array[:, 2]
-                top_preds = pred_array[:, 3]
-                cor_letter_ranks = pred_array[:, 4]
+            data = np.empty(len(pred_array), dtype=dtype)
+            data['Tested_Word'] = mod_words
+            data['Original_Word'] = orig_words
+            data['Correct_Letters'] = [','.join(miss) for miss in miss_letters]
+            
+            for i in range(3):
+                data[f'Top{i+1}_Predicted_Letter'] = [preds[i][0] if i < len(preds) else '' for preds in top_preds]
+                data[f'Top{i+1}_Confidence'] = [preds[i][1] if i < len(preds) else np.nan for preds in top_preds]
+                data[f'Top{i+1}_Is_Valid'] = is_valid[:, i]
+                data[f'Top{i+1}_Is_Accurate'] = is_accurate[:, i]
+            
+            data['Correct_Letter_Rank'] = cor_letter_ranks
+            data['In_Training_Set'] = in_training_set
 
-                # Prepare reconstructed words and validity checks
-                reconstructed_words = np.array([[mod.replace('_', pred[0]) for pred in preds] for mod, preds in zip(mod_words, top_preds)])
-                is_valid = is_valid_word_vec(reconstructed_words)
-                is_accurate = np.array([[pred[0] in miss for pred in preds] for miss, preds in zip(miss_letters, top_preds)])
-                in_training_set = is_in_training_set_vec(orig_words)
+            # Write to compressed CSV file using gzip for on-the-fly compression
+            with gzip.open(gzip_file_path, 'wt', newline='', encoding='utf-8') as f:
+                # Use numpy.savetxt for fast CSV writing
+                np.savetxt(f, data, delimiter=',', fmt='%s', header=','.join(dtype[0] for dtype in data.dtype.descr))
 
-                for i in range(len(pred_array)):
-                    row = [mod_words[i], orig_words[i], ','.join(miss_letters[i])]
-                    for j in range(3):
-                        if j < len(top_preds[i]):
-                            row.extend([top_preds[i][j][0], top_preds[i][j][1], int(is_valid[i][j]), int(is_accurate[i][j])])
-                        else:
-                            row.extend(['', '', '', ''])
-                    row.extend([cor_letter_ranks[i], int(in_training_set[i])])
-                    writer.writerow(row)
+            # Extract gzip file to regular CSV file
+            with gzip.open(gzip_file_path, 'rt', encoding='utf-8') as gz_file, csv_file_path.open('w', newline='', encoding='utf-8') as csv_file:
+                csv_file.write(gz_file.read())
+
+            # Delete the intermediate gzip file
+            gzip_file_path.unlink()
 
         except Exception as e:
             logging.error(f"Error exporting prediction details to CSV {csv_file_path}: {e}", exc_info=True)

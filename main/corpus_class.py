@@ -133,7 +133,8 @@ class CorpusManager:
         and filtering based on minimum word length.
         """
         words = self.CLEAN_PATTERN.findall(text.lower())  # Find all words and convert to lowercase
-        return {word for word in words if len(word) >= self.config.min_word_length}  # Filter words by length
+        split_words = {word for part in words for word in part.split('-') if len(word) >= self.config.min_word_length}
+        return split_words
 
     def load_corpus(self) -> np.ndarray:
         """
