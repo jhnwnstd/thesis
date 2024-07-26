@@ -100,9 +100,12 @@ class EvaluateModel:
                 logging.error(f'Invalid prediction format: {all_predictions}')
                 continue
 
+            correct_rank = None
             # Find the rank of the first correct prediction (accuracy)
-            correct_rank = next((rank for rank, (predicted_letter, _) in enumerate(all_predictions, start=1)
-                                if predicted_letter in missing_letters), None)
+            for rank, (predicted_letter, _) in enumerate(all_predictions, start=1):
+                if predicted_letter in missing_letters:
+                    correct_rank = rank
+                    break
 
             # Update accuracy counts for all ranks up to and including the correct rank
             if correct_rank:
@@ -113,10 +116,8 @@ class EvaluateModel:
             for rank, (predicted_letter, _) in enumerate(all_predictions[:3], start=1):
                 reconstructed_word = modified_word.replace('_', predicted_letter, 1)
                 if reconstructed_word in self.all_words:
-                    validity_counts[rank] += 1
-                    # If a valid word is found, it counts for all higher ranks as well
-                    for higher_rank in range(rank + 1, 4):
-                        validity_counts[higher_rank] += 1
+                    for valid_rank in range(rank, 4):
+                        validity_counts[valid_rank] += 1
                     break  # Stop checking after finding the first valid word
 
         # Calculate final metrics as percentages for easy interpretation
@@ -247,8 +248,7 @@ class EvaluateModel:
 
                         row.extend([predicted_letter, confidence, is_valid, is_accurate])
 
-                    row.append(cor_letter_rank)
-                    row.append(1 if orig_word in training_words_set else 0)
+                    row.extend([cor_letter_rank, 1 if orig_word in training_words_set else 0])
 
                     writer.writerow(row)
         except Exception as e:
