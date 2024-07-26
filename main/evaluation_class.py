@@ -1,6 +1,8 @@
 import numpy as np
 import logging
 import gzip
+from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures 
 from predictions_class import Predictions
 
 class EvaluateModel:
@@ -120,39 +122,34 @@ class EvaluateModel:
         }
 
     def evaluate_character_predictions(self, prediction_method) -> tuple[dict, list]:
-        """
-        Evaluate character predictions for the test set.
-        
-        Args:
-            prediction_method: The method to use for making predictions.
-        
-        Returns:
-            A tuple containing evaluation metrics and detailed prediction results.
-        """
         predictions = []
         
-        for modified_word, target_letters, original_word in self.test_set:
-            try:
-                # Get predictions for the modified word using the specified method
-                all_predictions = prediction_method(modified_word)
-                
-                # Validate prediction format to ensure consistency
-                if not isinstance(all_predictions, list) or not all(isinstance(pred, tuple) and len(pred) == 2 for pred in all_predictions):
-                    logging.error(f'Unexpected prediction format for {modified_word}: {all_predictions}')
-                    continue
+        with ThreadPoolExecutor() as executor:
+            future_to_word = {executor.submit(self._predict_word, prediction_method, modified_word, target_letters, original_word): (modified_word, target_letters, original_word) for modified_word, target_letters, original_word in self.test_set}
+            for future in concurrent.futures.as_completed(future_to_word):
+                try:
+                    predictions.append(future.result())
+                except Exception as exc:
+                    modified_word, target_letters, original_word = future_to_word[future]
+                    logging.error(f"Error predicting for {modified_word}: {exc}", exc_info=True)
 
-                # Find the rank of the correct prediction (if any)
-                correct_letter_rank = next((rank for rank, (retrieved_letter, _) in enumerate(all_predictions, start=1)
-                                            if retrieved_letter in target_letters), None)
-
-                # Store prediction details for later analysis
-                predictions.append((modified_word, target_letters, original_word, all_predictions[:3], correct_letter_rank))
-            except Exception as e:
-                logging.error(f"Error predicting for {modified_word}: {e}", exc_info=True)
-
-        # Compute overall metrics based on all predictions
         evaluation_metrics = self.compute_metrics(predictions)
         return evaluation_metrics, predictions
+
+    def _predict_word(self, prediction_method, modified_word, target_letters, original_word):
+        try:
+            all_predictions = prediction_method(modified_word)
+            if not isinstance(all_predictions, list) or not all(isinstance(pred, tuple) and len(pred) == 2 for pred in all_predictions):
+                logging.error(f'Unexpected prediction format for {modified_word}: {all_predictions}')
+                return None
+
+            correct_letter_rank = next((rank for rank, (retrieved_letter, _) in enumerate(all_predictions, start=1)
+                                        if retrieved_letter in target_letters), None)
+
+            return (modified_word, target_letters, original_word, all_predictions[:3], correct_letter_rank)
+        except Exception as e:
+            logging.error(f"Error predicting for {modified_word}: {e}", exc_info=True)
+            return None
 
     def save_summary_stats_txt(self, evaluation_metrics, predictions, prediction_method_name):
         """

@@ -168,12 +168,10 @@ class CorpusManager:
         """
         # Generate a permutation of indices using NumPy's random number generator
         shuffled_indices = self.rng.permutation(len(self.corpus))
-        # Reorder the corpus based on shuffled indices
-        shuffled_corpus = self.corpus[shuffled_indices]
         # Calculate the split point
-        split_point = int(len(shuffled_corpus) * self.config.split_config)
-        # Split into training and testing sets
-        return shuffled_corpus[:split_point], shuffled_corpus[split_point:]
+        split_point = int(len(self.corpus) * self.config.split_config)
+        # Shuffle and split the corpus
+        return self.corpus[shuffled_indices[:split_point]], self.corpus[shuffled_indices[split_point:]]
 
     def prepare_datasets(self):
         """
