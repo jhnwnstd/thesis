@@ -158,6 +158,75 @@ class Predictions:
         predictions = self._select_all_predictions(log_probabilities)
         return predictions[0][0]
 
+    def context_sensitive(self, test_word):
+        """
+        Context-sensitive prediction using boundary markers for a single missing letter.
+
+        Parameters:
+        - test_word (str): The word with a single missing letter.
+
+        Returns:
+        - list: Sorted list of predicted letters and their probabilities.
+        """
+        # Find the index of the missing letter in the word
+        missing_letter_index = test_word.index('_')
+        # Get log probabilities for each candidate letter for the specific missing letter position
+        log_probabilities = self._get_log_probabilities(test_word, missing_letter_index, with_boundaries=True)
+        # Select all predictions and return them sorted by probability
+        return self._select_all_predictions(log_probabilities)
+
+    def context_no_boundary(self, test_word):
+        """
+        Context prediction without boundary markers.
+
+        Parameters:
+        - test_word (str): The word with a single missing letter.
+
+        Returns:
+        - list: Sorted list of predicted letters and their probabilities.
+        """
+        # Find the index of the missing letter in the word
+        missing_letter_index = test_word.index('_')
+        # Get log probabilities for each candidate letter for the specific missing letter position
+        log_probabilities = self._get_log_probabilities(test_word, missing_letter_index, with_boundaries=False)
+        # Select all predictions and return them sorted by probability
+        return self._select_all_predictions(log_probabilities)
+
+    def base_prediction(self, test_word):
+        """
+        Base prediction method without any context.
+
+        Parameters:
+        - test_word (str): The word with a single missing letter.
+
+        Returns:
+        - list: Sorted list of predicted letters and their probabilities.
+        """
+        # Find the index of the missing letter in the word
+        missing_letter_index = test_word.index('_')
+        # Dictionary to store log probabilities of each letter
+        log_probabilities = {}
+
+        # Format the test word to match the training format by inserting spaces between characters
+        formatted_test_word = " ".join(test_word)
+
+        # Choose the model with the largest n-gram size available
+        max_q = max(self.q_range)
+        model = self.model.get(max_q)
+        if not model:
+            return []
+
+        for letter in self.unique_characters:
+            # Create a candidate word by replacing the missing letter with the current candidate letter
+            candidate_word = formatted_test_word[:missing_letter_index * 2] + letter + formatted_test_word[missing_letter_index * 2 + 1:]
+            # Calculate the log probability of this candidate word
+            log_probability = self._calculate_log_probability(model, candidate_word, bos=False, eos=False)
+            # Store the log probability for the current letter
+            log_probabilities[letter] = log_probability
+
+        # Select all predictions and return them sorted by probability
+        return self._select_all_predictions(log_probabilities)
+    
     def predict_multiple_missing_letters(self, test_word, with_boundaries=True):
         """
         Predict multiple missing letters in a word using optimized beam search and log probabilities.
@@ -236,72 +305,3 @@ class Predictions:
 
         # Return the word with the highest score
         return beam[0][1]
-
-    def context_sensitive(self, test_word):
-        """
-        Context-sensitive prediction using boundary markers for a single missing letter.
-
-        Parameters:
-        - test_word (str): The word with a single missing letter.
-
-        Returns:
-        - list: Sorted list of predicted letters and their probabilities.
-        """
-        # Find the index of the missing letter in the word
-        missing_letter_index = test_word.index('_')
-        # Get log probabilities for each candidate letter for the specific missing letter position
-        log_probabilities = self._get_log_probabilities(test_word, missing_letter_index, with_boundaries=True)
-        # Select all predictions and return them sorted by probability
-        return self._select_all_predictions(log_probabilities)
-
-    def context_no_boundary(self, test_word):
-        """
-        Context prediction without boundary markers.
-
-        Parameters:
-        - test_word (str): The word with a single missing letter.
-
-        Returns:
-        - list: Sorted list of predicted letters and their probabilities.
-        """
-        # Find the index of the missing letter in the word
-        missing_letter_index = test_word.index('_')
-        # Get log probabilities for each candidate letter for the specific missing letter position
-        log_probabilities = self._get_log_probabilities(test_word, missing_letter_index, with_boundaries=False)
-        # Select all predictions and return them sorted by probability
-        return self._select_all_predictions(log_probabilities)
-
-    def base_prediction(self, test_word):
-        """
-        Base prediction method without any context.
-
-        Parameters:
-        - test_word (str): The word with a single missing letter.
-
-        Returns:
-        - list: Sorted list of predicted letters and their probabilities.
-        """
-        # Find the index of the missing letter in the word
-        missing_letter_index = test_word.index('_')
-        # Dictionary to store log probabilities of each letter
-        log_probabilities = {}
-
-        # Format the test word to match the training format by inserting spaces between characters
-        formatted_test_word = " ".join(test_word)
-
-        # Choose the model with the largest n-gram size available
-        max_q = max(self.q_range)
-        model = self.model.get(max_q)
-        if not model:
-            return []
-
-        for letter in self.unique_characters:
-            # Create a candidate word by replacing the missing letter with the current candidate letter
-            candidate_word = formatted_test_word[:missing_letter_index * 2] + letter + formatted_test_word[missing_letter_index * 2 + 1:]
-            # Calculate the log probability of this candidate word
-            log_probability = self._calculate_log_probability(model, candidate_word, bos=False, eos=False)
-            # Store the log probability for the current letter
-            log_probabilities[letter] = log_probability
-
-        # Select all predictions and return them sorted by probability
-        return self._select_all_predictions(log_probabilities)

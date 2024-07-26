@@ -1,16 +1,10 @@
+import numpy as np
 import csv
 import logging
+from io import StringIO
 from predictions_class import Predictions
 
 class EvaluateModel:
-    """
-    A class for evaluating character prediction models in a language processing context.
-    
-    This class handles the evaluation of predictions for missing characters in words,
-    computing metrics such as accuracy and validity, and saving detailed results.
-    It's designed to work with various prediction methods and corpus configurations.
-    """
-
     def __init__(self, corpus_manager, split_type=None, log_initialization_details=True):
         """
         Initialize the EvaluateModel with necessary data and configurations.
@@ -25,10 +19,12 @@ class EvaluateModel:
         self.corpus_name = corpus_manager.corpus_name
         self.config = corpus_manager.config
         self.model = corpus_manager.model
-        self.corpus = corpus_manager.corpus
-        self.train_set = corpus_manager.train_set
-        self.test_set = corpus_manager.test_set
-        self.all_words = corpus_manager.all_words
+
+        # Convert lists to NumPy arrays for faster operations
+        self.corpus = np.array(corpus_manager.corpus)  
+        self.train_set = np.array(corpus_manager.train_set)  
+        self.test_set = np.array(corpus_manager.test_set)  
+        self.all_words = np.array(corpus_manager.all_words)  
         self.split_type = split_type
 
         # Extract unique characters from the corpus for character-level analysis
@@ -90,41 +86,39 @@ class EvaluateModel:
         Returns:
             A dictionary containing accuracy and validity metrics for top 1, 2, and 3 predictions.
         """
-        accuracy_counts = {1: 0, 2: 0, 3: 0}
-        validity_counts = {1: 0, 2: 0, 3: 0}
         total_test_words = len(self.test_set)
-
-        for modified_word, missing_letters, _, all_predictions, _ in predictions:
-            # Validate prediction format to ensure consistency
-            if not all(isinstance(pred, tuple) and len(pred) == 2 for pred in all_predictions):
-                logging.error(f'Invalid prediction format: {all_predictions}')
-                continue
-
-            correct_rank = None
-            # Find the rank of the first correct prediction (accuracy)
-            for rank, (predicted_letter, _) in enumerate(all_predictions, start=1):
-                if predicted_letter in missing_letters:
-                    correct_rank = rank
-                    break
-
-            # Update accuracy counts for all ranks up to and including the correct rank
+        
+        # Convert predictions to a NumPy array for faster processing
+        pred_array = np.array(predictions, dtype=object)
+        
+        # Initialize counters for accuracy and validity
+        accuracy_counts = np.zeros(3, dtype=int)
+        validity_counts = np.zeros(3, dtype=int)
+        
+        for modified_word, missing_letters, _, all_predictions, _ in pred_array:
+            # Determine the rank of the first correct prediction
+            correct_rank = np.argmax([pred[0] in missing_letters for pred in all_predictions]) + 1 if any([pred[0] in missing_letters for pred in all_predictions]) else None
+            
             if correct_rank:
-                for rank in range(correct_rank, 4):
-                    accuracy_counts[rank] += 1
-
-            # Check validity: whether predictions result in valid words
+                # Increment accuracy counts for all ranks up to the correct rank
+                accuracy_counts[correct_rank-1:] += 1
+            
+            # Check the validity of the top 3 predictions
             for rank, (predicted_letter, _) in enumerate(all_predictions[:3], start=1):
                 reconstructed_word = modified_word.replace('_', predicted_letter, 1)
                 if reconstructed_word in self.all_words:
-                    for valid_rank in range(rank, 4):
-                        validity_counts[valid_rank] += 1
-                    break  # Stop checking after finding the first valid word
+                    validity_counts[rank-1:] += 1
+                    break
 
-        # Calculate final metrics as percentages for easy interpretation
-        total_accuracy = {k: accuracy_counts[k] / total_test_words for k in accuracy_counts}
-        total_validity = {k: validity_counts[k] / total_test_words for k in validity_counts}
-
-        return {'accuracy': total_accuracy, 'validity': total_validity, 'total_words': total_test_words}
+        # Calculate accuracy and validity as percentages
+        total_accuracy = accuracy_counts / total_test_words
+        total_validity = validity_counts / total_test_words
+        
+        return {
+            'accuracy': {k+1: v for k, v in enumerate(total_accuracy)},
+            'validity': {k+1: v for k, v in enumerate(total_validity)},
+            'total_words': total_test_words
+        }
 
     def evaluate_character_predictions(self, prediction_method) -> tuple[dict, list]:
         """
@@ -137,7 +131,7 @@ class EvaluateModel:
             A tuple containing evaluation metrics and detailed prediction results.
         """
         predictions = []
-
+        
         for modified_word, target_letters, original_word in self.test_set:
             try:
                 # Get predictions for the modified word using the specified method
@@ -172,37 +166,49 @@ class EvaluateModel:
         """
         output_file_path = self.config.text_dir / f'{self.corpus_name}_predictions.txt'
         try:
+            # Use a StringIO buffer for efficient string concatenation
+            buffer = StringIO()
+
+            # Write general information about the evaluation
+            buffer.write(f'Prediction Method: {prediction_method_name}\n')
+            buffer.write(f'Unique Character Count: {self.unique_character_count}\n\n')
+
+            # Write accuracy and validity metrics for easy reference
+            accuracy = evaluation_metrics['accuracy']
+            validity = evaluation_metrics['validity']
+            for i in range(1, 4):
+                buffer.write(f'TOP{i} ACCURACY: {accuracy[i]:.2%}\n')
+                buffer.write(f'TOP{i} VALIDITY: {validity[i]:.2%}\n')
+            buffer.write('\n')
+
+            # Write dataset information for context
+            buffer.write(f'Train Size: {len(self.train_set)}, Test Size: {len(self.test_set)}\n')
+            buffer.write(f'Vowel Ratio: {self.config.vowel_replacement_ratio}, '
+                         f'Consonant Ratio: {self.config.consonant_replacement_ratio}\n\n')
+
+            # Convert predictions to a NumPy array for faster processing
+            pred_array = np.array(predictions, dtype=object)
+
+            # Vectorize the 'in' operation for faster lookup of valid words
+            is_valid_word_vec = np.vectorize(lambda w: w in self.all_words)
+
+            for mod_word, miss_letters, orig_word, top_preds, cor_letter_rank in pred_array:
+                buffer.write(f'Test Word: {mod_word}, Correct Letters: {",".join(miss_letters)}\n')
+                buffer.write(f'Correct Letter Rank: {cor_letter_rank}\n')
+
+                # Prepare reconstructed words for validation check
+                reconstructed_words = [mod_word.replace('_', pred[0]) for pred in top_preds]
+                is_valid_words = is_valid_word_vec(reconstructed_words)
+
+                for rank, ((pred_letter, confidence), is_valid) in enumerate(zip(top_preds, is_valid_words), start=1):
+                    buffer.write(f"Rank {rank}: '{pred_letter}' (Confidence: {confidence:.8f}), Valid: {is_valid}\n")
+
+                buffer.write('\n')
+
+            # Write the entire buffer contents to file at once
             with output_file_path.open('w', encoding='utf-8') as file:
-                # Write general information about the evaluation
-                file.write(f'Prediction Method: {prediction_method_name}\n')
-                file.write(f'Unique Character Count: {self.unique_character_count}\n\n')
+                file.write(buffer.getvalue())
 
-                # Write accuracy and validity metrics for easy reference
-                accuracy = evaluation_metrics['accuracy']
-                validity = evaluation_metrics['validity']
-                for i in range(1, 4):
-                    file.write(f'TOP{i} ACCURACY: {accuracy[i]:.2%}\n')
-                    file.write(f'TOP{i} VALIDITY: {validity[i]:.2%}\n')
-                file.write('\n')
-
-                # Write dataset information for context
-                file.write(f'Train Size: {len(self.train_set)}, Test Size: {len(self.test_set)}\n')
-                file.write(f'Vowel Ratio: {self.config.vowel_replacement_ratio}, '
-                           f'Consonant Ratio: {self.config.consonant_replacement_ratio}\n\n')
-
-                # Write detailed prediction results for each test word
-                for mod_word, miss_letters, orig_word, top_preds, cor_letter_rank in predictions:
-                    file.write(f'Test Word: {mod_word}, Correct Letters: {",".join(miss_letters)}\n')
-                    file.write(f'Correct Letter Rank: {cor_letter_rank}\n')
-
-                    for rank, (pred_letter, confidence) in enumerate(top_preds, start=1):
-                        reconstructed_word = mod_word.replace('_', pred_letter)
-                        is_valid_word = reconstructed_word in self.all_words
-
-                        file.write(f"Rank {rank}: '{pred_letter}' (Confidence: {confidence:.8f}), "
-                                   f"Valid: {is_valid_word}\n")
-
-                    file.write('\n')
         except Exception as e:
             logging.error(f"Error saving summary stats to {output_file_path}: {e}", exc_info=True)
 
@@ -222,10 +228,19 @@ class EvaluateModel:
             f'{self.config.q_range[1]}_prediction.csv'
         )
         try:
+            # Convert predictions to a NumPy array for faster processing
+            pred_array = np.array(predictions, dtype=object)
+
+            # Create sets for faster lookup
+            all_words_set = set(self.all_words)
+            training_words_set = set(self.train_set)
+
+            # Vectorize operations for speedup
+            is_valid_word_vec = np.vectorize(lambda w: w in all_words_set)
+            is_in_training_set_vec = np.vectorize(lambda w: w in training_words_set)
+
             with csv_file_path.open('w', newline='', encoding='utf-8') as file:
                 writer = csv.writer(file)
-
-                # Write CSV header with detailed column descriptions
                 writer.writerow([
                     'Tested_Word', 'Original_Word', 'Correct_Letter(s)', 
                     'Top1_Predicted_Letter', 'Top1_Confidence', 'Top1_Is_Valid', 'Top1_Is_Accurate',
@@ -234,22 +249,28 @@ class EvaluateModel:
                     'Correct_Letter_Rank', 'In_Training_Set'
                 ])
 
-                # Create a set of training words for quick lookup during validation
-                training_words_set = set(self.train_set)
-                
-                # Write prediction details for each test word
-                for mod_word, miss_letters, orig_word, top_preds, cor_letter_rank in predictions:
-                    row = [mod_word, orig_word, ','.join(miss_letters)]
+                # Extract data from prediction array
+                mod_words = pred_array[:, 0]
+                miss_letters = pred_array[:, 1]
+                orig_words = pred_array[:, 2]
+                top_preds = pred_array[:, 3]
+                cor_letter_ranks = pred_array[:, 4]
 
-                    for predicted_letter, confidence in top_preds:
-                        reconstructed_word = mod_word.replace('_', predicted_letter)
-                        is_valid = 1 if reconstructed_word in self.all_words else 0
-                        is_accurate = 1 if predicted_letter in miss_letters else 0
+                # Prepare reconstructed words and validity checks
+                reconstructed_words = np.array([[mod.replace('_', pred[0]) for pred in preds] for mod, preds in zip(mod_words, top_preds)])
+                is_valid = is_valid_word_vec(reconstructed_words)
+                is_accurate = np.array([[pred[0] in miss for pred in preds] for miss, preds in zip(miss_letters, top_preds)])
+                in_training_set = is_in_training_set_vec(orig_words)
 
-                        row.extend([predicted_letter, confidence, is_valid, is_accurate])
-
-                    row.extend([cor_letter_rank, 1 if orig_word in training_words_set else 0])
-
+                for i in range(len(pred_array)):
+                    row = [mod_words[i], orig_words[i], ','.join(miss_letters[i])]
+                    for j in range(3):
+                        if j < len(top_preds[i]):
+                            row.extend([top_preds[i][j][0], top_preds[i][j][1], int(is_valid[i][j]), int(is_accurate[i][j])])
+                        else:
+                            row.extend(['', '', '', ''])
+                    row.extend([cor_letter_ranks[i], int(in_training_set[i])])
                     writer.writerow(row)
+
         except Exception as e:
             logging.error(f"Error exporting prediction details to CSV {csv_file_path}: {e}", exc_info=True)

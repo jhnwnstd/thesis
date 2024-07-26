@@ -1,4 +1,4 @@
-import random
+import numpy as np
 import logging
 import regex as reg
 from pathlib import Path
@@ -99,7 +99,7 @@ class CorpusManager:
         """Add unique words to the global corpus set for cross-corpus analysis."""
         CorpusManager.unique_words_all_corpora.update(unique_words)
 
-    def __init__(self, corpus_name, config, debug=True):
+    def __init__(self, corpus_name, config, debug=False):
         """
         Initialize the CorpusManager with a specific corpus and configuration.
 
@@ -111,16 +111,17 @@ class CorpusManager:
         self.corpus_name = self.format_corpus_name(corpus_name)
         self.config = config
         self.debug = debug
-        # Initialize random number generator with seed for reproducibility
-        self.rng = random.Random(config.seed)
-        self.corpus = set()
-        self.train_set = set()
-        self.test_set = set()
-        self.all_words = set()
+        # Use NumPy's random number generator for better randomization control
+        self.rng = np.random.RandomState(config.seed)
+        # Initialize corpus, training set, test set, and all words as NumPy arrays
+        self.corpus = np.array([])
+        self.train_set = np.array([])
+        self.test_set = np.array([])
+        self.all_words = np.array([])
         self.model = {}
-        self.load_corpus()
-        self.prepare_datasets()
-        self.generate_and_load_models()
+        self.load_corpus()  # Load and clean the corpus
+        self.prepare_datasets()  # Prepare training and testing datasets
+        self.generate_and_load_models()  # Generate and load KenLM models
 
     def extract_unique_characters(self) -> set:
         """Extract all unique characters from the corpus for character-level analysis."""
@@ -131,26 +132,24 @@ class CorpusManager:
         Clean the input text by extracting words, converting to lowercase,
         and filtering based on minimum word length.
         """
-        return {part.lower() for word in self.CLEAN_PATTERN.findall(text)  # Extract words using regex
-                for part in word.split('-')  # Split hyphenated words
-                if len(part) >= self.config.min_word_length}  # Filter out short words
+        words = self.CLEAN_PATTERN.findall(text.lower())  # Find all words and convert to lowercase
+        return {word for word in words if len(word) >= self.config.min_word_length}  # Filter words by length
 
-    def load_corpus(self) -> set[str]:
+    def load_corpus(self) -> np.ndarray:
         """
-        Load the corpus from a file or NLTK, clean it, and store as a set of unique words.
+        Load the corpus from a file or NLTK, clean it, and store as a sorted NumPy array of unique words.
         """
-        file_path = self.config.corpus_dir / f'{self.corpus_name}.txt'
+        file_path = self.config.corpus_dir / f'{self.corpus_name}.txt'  # Path to the local corpus file
         if file_path.is_file():
             # Load corpus from local file if it exists
             with file_path.open('r', encoding='utf-8') as file:
-                self.corpus = self.clean_text(file.read())
+                corpus = self.clean_text(file.read())
         else:
+            # Attempt to load corpus from NLTK if local file doesn't exist
             try:
-                # Attempt to load corpus from NLTK if local file doesn't exist
                 nltk_corpus_name = self.corpus_name.replace('.txt', '')
                 nltk.download(nltk_corpus_name, quiet=True)  # Download NLTK corpus if not already present
-                # Join all words in the NLTK corpus and clean the resulting text
-                self.corpus = self.clean_text(' '.join(getattr(nltk.corpus, nltk_corpus_name).words()))
+                corpus = self.clean_text(' '.join(getattr(nltk.corpus, nltk_corpus_name).words()))
             except AttributeError:
                 # Raise error if neither local file nor NLTK corpus is found
                 raise ValueError(f"File '{file_path}' does not exist and NLTK corpus '{nltk_corpus_name}' not found.")
@@ -158,67 +157,84 @@ class CorpusManager:
                 # Catch and re-raise any other exceptions during corpus loading
                 raise RuntimeError(f"Failed to load corpus '{self.corpus_name}': {e}")
 
+        # Store the cleaned corpus as a sorted NumPy array of unique words
+        self.corpus = np.array(sorted(corpus))
         return self.corpus
 
-    def _shuffle_and_split_corpus(self) -> tuple[set[str], set[str]]:
+    def _shuffle_and_split_corpus(self) -> tuple[np.ndarray, np.ndarray]:
         """
-        Shuffle the corpus and split it into training and testing sets.
+        Deterministically shuffle the corpus and split it into training and testing sets.
         """
-        # Convert the set to a list for shuffling
-        shuffled_corpus = list(self.corpus)
-        
-        # Shuffle the corpus in place for randomness
-        self.rng.shuffle(shuffled_corpus)
-        
-        # Calculate the split point based on the training set size ratio
+        # Generate a permutation of indices using NumPy's random number generator
+        shuffled_indices = self.rng.permutation(len(self.corpus))
+        # Reorder the corpus based on shuffled indices
+        shuffled_corpus = self.corpus[shuffled_indices]
+        # Calculate the split point
         split_point = int(len(shuffled_corpus) * self.config.split_config)
-        
-        # Split the shuffled corpus into training and testing sets and return as sets
-        train_set = set(shuffled_corpus[:split_point])
-        test_set = set(shuffled_corpus[split_point:])
-        
-        return train_set, test_set
+        # Split into training and testing sets
+        return shuffled_corpus[:split_point], shuffled_corpus[split_point:]
 
     def prepare_datasets(self):
         """
         Prepare training and testing datasets, including letter replacements for the test set.
         """
-        # Shuffle the corpus and split it into training and unprocessed test sets
+        # Shuffle and split the corpus
         self.train_set, unprocessed_test_set = self._shuffle_and_split_corpus()
         
         # Define the path for the formatted training set file
         formatted_train_set_path = self.config.sets_dir / f'{self.corpus_name}_formatted_train_set.txt'
-        
         # Generate the formatted corpus file for the training set
         self.generate_formatted_corpus(self.train_set, formatted_train_set_path)
 
-        # Prepare the formatted test set
-        # This involves replacing letters in each word and collecting modified words with their missing letters
-        formatted_test_set = [
-            (modified_word, tuple(missing_letters), word)  # Create a tuple with modified word, missing letters, and original word
-            for word in unprocessed_test_set  # Iterate over each word in the unprocessed test set
-            for modified_word, missing_letters in [self._replace_letters(word, min(self.config.num_replacements, len(word)))]  # Replace letters
-            if missing_letters  # Include only if there are missing letters
-        ]
-
-        # Convert the formatted test set to a set to remove duplicates and store it in self.test_set
-        self.test_set = set(formatted_test_set)
+        # Use NumPy's vectorize to apply _replace_letters to each word in the test set
+        vectorized_replace = np.vectorize(self._replace_letters, otypes=[object, object])
+        modified_words, missing_letters = vectorized_replace(unprocessed_test_set, self.config.num_replacements)
+        
+        # Store the formatted test set as a NumPy array of tuples
+        self.test_set = np.empty(len(unprocessed_test_set), dtype=object)
+        self.test_set[:] = list(zip(modified_words, missing_letters, unprocessed_test_set))
         
         # Combine the training set and the original words from the test set to create the complete set of all words
-        self.all_words = self.train_set.union({original_word for _, _, original_word in self.test_set})
+        self.all_words = np.unique(np.concatenate([self.train_set, unprocessed_test_set]))
 
-        # If debugging is enabled, save the training set, test set, and all words set to files
         if self.debug:
+            # Save the training set, test set, and all words set to files if debugging is enabled
             self.save_set_to_file(self.train_set, f'{self.corpus_name}_train_set.txt')
             self.save_set_to_file(self.test_set, f'{self.corpus_name}_formatted_test_set.txt')
             self.save_set_to_file(self.all_words, f'{self.corpus_name}_all_words.txt')
+
+    def _replace_letters(self, word, num_replacements):
+        """
+        Replace a specified number of letters in a word with underscores.
+
+        Args:
+            word (str): The word to modify.
+            num_replacements (int): Number of letters to replace.
+
+        Returns:
+            tuple: Modified word and list of replaced letters.
+        """
+        char_array = np.array(list(word))  # Convert word to a NumPy array of characters
+        replaceable_mask = np.isin(char_array, list(Letters.VOWELS.value + Letters.CONSONANTS.value))  # Create mask
+        replaceable_indices = np.where(replaceable_mask)[0]  # Get indices of replaceable letters
+
+        if len(replaceable_indices) == 0:
+            return word, []
+
+        num_to_replace = min(num_replacements, len(replaceable_indices))
+        replace_indices = self.rng.choice(replaceable_indices, size=num_to_replace, replace=False)
+
+        missing_letters = char_array[replace_indices].tolist()  # List of letters that will be replaced
+        char_array[replace_indices] = '_'  # Replace letters with underscores
+
+        return ''.join(char_array), missing_letters
 
     def generate_formatted_corpus(self, data_set, formatted_corpus_path) -> Path:
         """
         Generate a formatted corpus file from a set of words.
 
         Args:
-            data_set (set): Set of words to format.
+            data_set (np.ndarray): Set of words to format.
             formatted_corpus_path (Path): Path to save the formatted corpus.
 
         Returns:
@@ -236,99 +252,43 @@ class CorpusManager:
         Args:
             corpus_path (Path): Path to the corpus file.
         """
-        model_directory = self.config.model_dir / self.corpus_name
-        model_directory.mkdir(parents=True, exist_ok=True)
+        model_directory = self.config.model_dir / self.corpus_name  # Directory to store the models
+        model_directory.mkdir(parents=True, exist_ok=True)  # Create the directory if it doesn't exist
 
-        model_loaded = False
         for q in self.config.q_range:
             if q not in self.model:
                 # Build and load KenLM model for each q-gram size
                 _, binary_file = build_kenlm_model(self.corpus_name, q, corpus_path, model_directory)
                 if binary_file:
-                    self.model[q] = kenlm.Model(binary_file)
-                    model_loaded = True
+                    self.model[q] = kenlm.Model(binary_file)  # Store the loaded model in the dictionary
 
-        if model_loaded:
-            logging.info(f'Model for {q}-gram loaded from {self.corpus_name}')
+        if self.model:
+            logging.info(f'Models loaded for {self.corpus_name}')  # Log a message if models are loaded
 
     def generate_and_load_models(self):
         """
         Generate formatted corpus and load KenLM models.
         """
-        formatted_train_set_path = self.config.sets_dir / f'{self.corpus_name}_formatted_train_set.txt'
-        self.generate_formatted_corpus(self.train_set, formatted_train_set_path)
-        self.generate_models_from_corpus(formatted_train_set_path)
-
-    def _replace_letters(self, word, num_replacements) -> tuple[str, list[str]]:
-        """
-        Replace a specified number of letters in a word with underscores.
-
-        Args:
-            word (str): The word to modify.
-            num_replacements (int): Number of letters to replace.
-
-        Returns:
-            tuple: Modified word and list of replaced letters.
-        """
-        modified_word = word
-        missing_letters = []
-        for _ in range(num_replacements):
-            if self.has_replaceable_letter(modified_word):
-                # Replace a random letter and keep track of the replaced letter
-                modified_word, missing_letter = self._replace_random_letter(modified_word) # Replace a random letter
-                missing_letters.append(missing_letter) # Append the replaced letter to the list
-        return modified_word, missing_letters
-
-    def _replace_random_letter(self, word) -> tuple[str, str]:
-        """
-        Replace a random letter in the word with an underscore.
-
-        Args:
-            word (str): The word to modify.
-
-        Returns:
-            tuple: Modified word and the replaced letter.
-        """
-        # Identify indices of vowels and consonants in the word
-        vowel_indices = [i for i, letter in enumerate(word) if Letters.is_vowel(letter)]
-        consonant_indices = [i for i, letter in enumerate(word) if Letters.is_consonant(letter)]
-
-        if not vowel_indices and not consonant_indices:
-            raise ValueError(f"Unable to replace a letter in word: '{word}'.")
-
-        # Choose between vowel and consonant based on replacement ratio
-        letter_indices = vowel_indices if self.rng.random() < self.config.vowel_replacement_ratio and vowel_indices else consonant_indices or vowel_indices
-        letter_index = self.rng.choice(letter_indices) # Choose a random index from the selected type
-        missing_letter = word[letter_index] 
-        # Replace the chosen letter with an underscore
-        modified_word = word[:letter_index] + '_' + word[letter_index + 1:]
-
-        return modified_word, missing_letter
-    
-    def has_replaceable_letter(self, word) -> bool:
-        """
-        Check if the word has any replaceable letters (vowels or consonants).
-
-        Args:
-            word (str): The word to check.
-
-        Returns:
-            bool: True if the word has replaceable letters, False otherwise.
-        """
-        # Check if the word contains any vowels or consonants
-        return any(Letters.is_vowel(letter) for letter in word) or any(Letters.is_consonant(letter) for letter in word)
+        formatted_train_set_path = self.config.sets_dir / f'{self.corpus_name}_formatted_train_set.txt'  # Path for formatted training set
+        self.generate_formatted_corpus(self.train_set, formatted_train_set_path)  # Generate formatted corpus file
+        self.generate_models_from_corpus(formatted_train_set_path)  # Generate and load models from the formatted corpus
 
     def save_set_to_file(self, data_set, file_name):
         """
         Save a set of data to a file.
 
         Args:
-            data_set (set): Set of data to save.
+            data_set (np.ndarray): Set of data to save.
             file_name (str): Name of the file to save the data to.
         """
-        file_path = self.config.sets_dir / file_name
-        with file_path.open('w', encoding='utf-8') as file:
-            # Create a generator that converts items to strings
-            lines = (f"{','.join(map(str, item))}\n" if isinstance(item, tuple) else f"{item}\n" for item in data_set)
-            # Write all lines to the file
-            file.writelines(lines)
+        file_path = self.config.sets_dir / file_name  # Path to the file
+
+        if np.issubdtype(data_set.dtype, np.number):
+            np.savetxt(file_path, data_set, delimiter=',')
+        else:
+            with file_path.open('w', encoding='utf-8') as file:
+                if isinstance(data_set[0], tuple):
+                    lines = ['{},{}'.format(*map(str, item)) if len(item) == 2 else ','.join(map(str, item)) for item in data_set]
+                else:
+                    lines = list(map(str, data_set))
+                file.write('\n'.join(lines) + '\n')
