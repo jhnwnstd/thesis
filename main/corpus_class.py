@@ -212,8 +212,7 @@ class CorpusManager:
         """
         # Join words with spaces and separate by newlines for KenLM compatibility
         formatted_text = '\n'.join(' '.join(word) for word in data_set)
-        with formatted_corpus_path.open('w', encoding='utf-8') as f:
-            f.write(formatted_text)
+        formatted_corpus_path.write_text(formatted_text, encoding='utf-8')
         return formatted_corpus_path
 
     def generate_models_from_corpus(self, corpus_path):
