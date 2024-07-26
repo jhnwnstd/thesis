@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import logging
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, List
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 # Configure logging
@@ -44,9 +44,9 @@ def calculate_histogram_data(df: pd.DataFrame, column_name: str, bins: np.ndarra
     
     return valid_proportions, invalid_proportions
 
-def plot_normalized_stacked_histogram(ax: plt.Axes, dataset: pd.DataFrame, valid_color: str, invalid_color: str, 
-                                      label: str, column_name: str, threshold: float = 0.60, bins: int = 30) -> None:
-    """Enhanced plotting to highlight the second bin where proportions exceed a given threshold."""
+def plot_histogram(ax: plt.Axes, dataset: pd.DataFrame, valid_color: str, invalid_color: str, 
+                   label: str, column_name: str, threshold: float = 0.60, bins: int = 30) -> None:
+    """Plot normalized stacked histogram and highlight the second threshold bin."""
     if dataset is None or dataset.empty:
         ax.text(0.5, 0.5, 'Data Unavailable', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, fontsize=16)
         return
@@ -54,7 +54,6 @@ def plot_normalized_stacked_histogram(ax: plt.Axes, dataset: pd.DataFrame, valid
     bins = np.linspace(0, 1, bins + 1)
     valid_proportions, invalid_proportions = calculate_histogram_data(dataset, column_name, bins)
     
-    # Find the second bin where valid proportions exceed the threshold
     threshold_bin_indices = np.where(valid_proportions >= threshold)[0]
     if len(threshold_bin_indices) > 1:
         second_threshold_bin_index = threshold_bin_indices[1]
@@ -79,19 +78,18 @@ def plot_normalized_stacked_histogram(ax: plt.Axes, dataset: pd.DataFrame, valid
     ax.grid(True, which='both', linestyle='--', linewidth=0.5)
     ax.minorticks_on()
 
-def plot_and_save_figures(loaded_datasets: Dict[str, Optional[pd.DataFrame]], column_name: str, filename: str) -> None:
-    """Plot and save figures for given column_name."""
+def create_figures_for_datasets(loaded_datasets: Dict[str, Optional[pd.DataFrame]], column_name: str) -> List[plt.Figure]:
+    """Create figures for given column_name."""
     n_datasets = len(loaded_datasets)
     n_cols = 2
     n_rows = (n_datasets + n_cols - 1) // n_cols
 
     fig, axs = plt.subplots(n_rows, n_cols, figsize=(16, 6 * n_rows), squeeze=False)
     colors = [plt.get_cmap('tab10')(i) for i in range(n_datasets)]
-
     combined_data = []
 
     for (label, dataset), color, ax in zip(loaded_datasets.items(), colors, axs.flatten()):
-        plot_normalized_stacked_histogram(ax, dataset, color, 'tab:gray', label, column_name)
+        plot_histogram(ax, dataset, color, 'tab:gray', label, column_name)
         if dataset is not None and not dataset.empty:
             combined_data.append(dataset)
 
@@ -99,23 +97,27 @@ def plot_and_save_figures(loaded_datasets: Dict[str, Optional[pd.DataFrame]], co
         ax.set_visible(False)
 
     plt.tight_layout(pad=2.0)
-    output_dir = Path('output/confs')
-    output_dir.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_dir / f'{filename}.png')
-    plt.close(fig)
 
-    # Combine all datasets and plot the combined histogram
+    combined_fig, combined_ax = None, None
     if combined_data:
         combined_dataset = pd.concat(combined_data, ignore_index=True)
-        fig, ax = plt.subplots(figsize=(12, 8))
-        plot_normalized_stacked_histogram(ax, combined_dataset, 'tab:blue', 'tab:gray', 'Combined', column_name)
-        fig.savefig(output_dir / f'combined_{filename}.png')
+        combined_fig, combined_ax = plt.subplots(figsize=(12, 8))
+        plot_histogram(combined_ax, combined_dataset, 'tab:blue', 'tab:gray', 'Combined', column_name)
+    
+    return [fig] + ([combined_fig] if combined_fig else [])
+
+def save_figures(figures: List[plt.Figure], filename: str) -> None:
+    """Save figures to output directory."""
+    output_dir = Path('output/confs')
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for i, fig in enumerate(figures):
+        suffix = f'_combined' if i > 0 else ''
+        fig.savefig(output_dir / f'{filename}{suffix}.png')
         plt.close(fig)
 
 def main():
     plt.style.use('seaborn-v0_8-colorblind')
 
-    # Load datasets in parallel
     with ProcessPoolExecutor() as executor:
         future_to_dataset = {executor.submit(load_dataset, (name, path)): name for name, path in DATASET_PATHS.items()}
         loaded_datasets = {}
@@ -124,11 +126,10 @@ def main():
             if df is not None:
                 loaded_datasets[name] = df
 
-    # Create plots for "Top1_Is_Accurate"
-    plot_and_save_figures(loaded_datasets, "Top1_Is_Accurate", 'normalized_accurate_stacked_histograms')
-
-    # Create plots for "Top1_Is_Valid"
-    plot_and_save_figures(loaded_datasets, "Top1_Is_Valid", 'normalized_valid_stacked_histograms')
+    for column_name, filename in [("Top1_Is_Accurate", 'normalized_accurate_stacked_histograms'), 
+                                  ("Top1_Is_Valid", 'normalized_valid_stacked_histograms')]:
+        figures = create_figures_for_datasets(loaded_datasets, column_name)
+        save_figures(figures, filename)
 
 if __name__ == "__main__":
     main()
