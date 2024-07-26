@@ -122,6 +122,9 @@ class EvaluateModel:
         }
 
     def evaluate_character_predictions(self, prediction_method) -> tuple[dict, list]:
+        """
+        Evaluate the model's character-level predictions using the specified method.
+        """
         predictions = []
         
         with ThreadPoolExecutor() as executor:
@@ -137,6 +140,9 @@ class EvaluateModel:
         return evaluation_metrics, predictions
 
     def _predict_word(self, prediction_method, modified_word, target_letters, original_word):
+        """
+        Predict the missing letters in a word using the specified prediction method.
+        """
         try:
             all_predictions = prediction_method(modified_word)
             if not isinstance(all_predictions, list) or not all(isinstance(pred, tuple) and len(pred) == 2 for pred in all_predictions):
