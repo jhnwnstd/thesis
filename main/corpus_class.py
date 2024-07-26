@@ -164,10 +164,20 @@ class CorpusManager:
         """
         Shuffle the corpus and split it into training and testing sets.
         """
-        shuffled_corpus = list(self.corpus)  # Convert set to list for shuffling
-        self.rng.shuffle(shuffled_corpus)  # Shuffle the corpus for randomness
-        train_size = int(len(self.corpus) * self.config.split_config)  # Calculate split point
-        return set(shuffled_corpus[:train_size]), set(shuffled_corpus[train_size:])  # Split and return as sets
+        # Convert the set to a list for shuffling
+        shuffled_corpus = list(self.corpus)
+        
+        # Shuffle the corpus in place for randomness
+        self.rng.shuffle(shuffled_corpus)
+        
+        # Calculate the split point based on the training set size ratio
+        split_point = int(len(shuffled_corpus) * self.config.split_config)
+        
+        # Split the shuffled corpus into training and testing sets and return as sets
+        train_set = set(shuffled_corpus[:split_point])
+        test_set = set(shuffled_corpus[split_point:])
+        
+        return train_set, test_set
 
     def prepare_datasets(self):
         """
