@@ -173,28 +173,32 @@ class CorpusManager:
         """
         Prepare training and testing datasets, including letter replacements for the test set.
         """
-        # Split the corpus into training and testing sets
+        # Shuffle the corpus and split it into training and unprocessed test sets
         self.train_set, unprocessed_test_set = self._shuffle_and_split_corpus()
         
-        # Generate and save formatted training set
+        # Define the path for the formatted training set file
         formatted_train_set_path = self.config.sets_dir / f'{self.corpus_name}_formatted_train_set.txt'
+        
+        # Generate the formatted corpus file for the training set
         self.generate_formatted_corpus(self.train_set, formatted_train_set_path)
 
-        formatted_test_set = []
-        for word in unprocessed_test_set:
-            # Determine number of letter replacements, capped by word length
-            num_replacements = min(self.config.num_replacements, len(word))
-            # Replace letters in the word
-            modified_word, missing_letters = self._replace_letters(word, num_replacements)
-            if missing_letters:  # Only add to test set if letters were actually replaced
-                formatted_test_set.append((modified_word, tuple(missing_letters), word))
+        # Prepare the formatted test set
+        # This involves replacing letters in each word and collecting modified words with their missing letters
+        formatted_test_set = [
+            (modified_word, tuple(missing_letters), word)  # Create a tuple with modified word, missing letters, and original word
+            for word in unprocessed_test_set  # Iterate over each word in the unprocessed test set
+            for modified_word, missing_letters in [self._replace_letters(word, min(self.config.num_replacements, len(word)))]  # Replace letters
+            if missing_letters  # Include only if there are missing letters
+        ]
 
+        # Convert the formatted test set to a set to remove duplicates and store it in self.test_set
         self.test_set = set(formatted_test_set)
-        # Combine train and test sets to get all unique words
+        
+        # Combine the training set and the original words from the test set to create the complete set of all words
         self.all_words = self.train_set.union({original_word for _, _, original_word in self.test_set})
 
+        # If debugging is enabled, save the training set, test set, and all words set to files
         if self.debug:
-            # Save datasets for debugging and analysis
             self.save_set_to_file(self.train_set, f'{self.corpus_name}_train_set.txt')
             self.save_set_to_file(self.test_set, f'{self.corpus_name}_formatted_test_set.txt')
             self.save_set_to_file(self.all_words, f'{self.corpus_name}_all_words.txt')
@@ -314,5 +318,7 @@ class CorpusManager:
         """
         file_path = self.config.sets_dir / file_name
         with file_path.open('w', encoding='utf-8') as file:
-            # Write each item in the set to a new line in the file
-            file.writelines(f"{item}\n" for item in data_set)
+            # Create a generator that converts items to strings
+            lines = (f"{','.join(map(str, item))}\n" if isinstance(item, tuple) else f"{item}\n" for item in data_set)
+            # Write all lines to the file
+            file.writelines(lines)
