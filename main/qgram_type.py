@@ -14,7 +14,7 @@ class Config:
     split_config: float = 0.5 # train-test split ratio
     vowel_replacement_ratio: float = 0.2 # must sum to 1 with consonant_replacement_ratio
     consonant_replacement_ratio: float = 0.8 # must sum to 1 with vowel_replacement_ratio
-    min_word_length: int = 3 # minimum word length for evaluation
+    min_word_length: int = 4 # minimum word length for evaluation
     prediction_method_name: str = 'context_sensitive' # method to use for prediction
     num_replacements: int = 1 # number of replacements to make: Note not all features of this code work with num_replacements > 1
     log_level: int = logging.INFO
