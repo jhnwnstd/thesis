@@ -130,8 +130,8 @@ class CorpusManager:
         self.debug = debug
         self.rng = random.Random(config.seed)  # Seeded random number generator for deterministic randomness
         self.corpus = []
-        self.train_set = set()
-        self.test_set = set()
+        self.train_set = []
+        self.test_set = []
         self.all_words = set()  # Use a set for fast membership checks
         self.model = {}
         self.load_corpus()  # Load and clean the corpus
@@ -185,17 +185,17 @@ class CorpusManager:
 
         return self.corpus
 
-    def _shuffle_and_split_corpus(self) -> tuple[set[str], set[str]]:
+    def _shuffle_and_split_corpus(self) -> tuple[list[str], list[str]]:
         """
         Shuffle the corpus deterministically and split it into training and testing sets.
 
         Returns:
-            tuple: Sets of training and testing sets.
+            tuple: Lists of training and testing sets.
         """
         shuffled_corpus = list(self.corpus)  # Convert corpus to list for shuffling
         self.rng.shuffle(shuffled_corpus)  # Shuffle using the seeded random generator
         train_size = int(len(self.corpus) * self.config.split_config)
-        return set(shuffled_corpus[:train_size]), set(shuffled_corpus[train_size:])
+        return shuffled_corpus[:train_size], shuffled_corpus[train_size:]
 
     def prepare_datasets(self):
         """
@@ -212,8 +212,8 @@ class CorpusManager:
             if missing_letters:
                 formatted_test_set.append((modified_word, tuple(missing_letters), word))
 
-        self.test_set = set(formatted_test_set)  # Convert to set for fast membership checking
-        self.all_words = self.train_set.union({original_word for _, _, original_word in self.test_set})
+        self.test_set = formatted_test_set  # Leave as list for deterministic order
+        self.all_words = set(self.train_set).union({original_word for _, _, original_word in self.test_set})
 
         if self.debug:
             self.save_set_to_file(self.train_set, f'{self.corpus_name}_train_set.txt')
@@ -225,7 +225,7 @@ class CorpusManager:
         Generate a formatted corpus file from a set of words.
 
         Args:
-            data_set (set): Set of words to format.
+            data_set (list): Set of words to format.
             formatted_corpus_path (Path): Path to save the formatted corpus.
 
         Returns:
