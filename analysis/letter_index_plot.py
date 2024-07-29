@@ -5,8 +5,7 @@ import statsmodels.formula.api as smf
 import matplotlib.pyplot as plt
 import seaborn as sns
 import logging
-from typing import Dict, Optional, Tuple
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from typing import Dict, Optional
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -95,49 +94,39 @@ def plot_accuracy_vs_index(stats: pd.DataFrame, dataset_name: str):
     plt.savefig(save_path)
     plt.close()
 
-def analyze_dataset(args: Tuple[str, Path]) -> Dict[str, Optional[Dict]]:
+def analyze_dataset(dataset_name: str, file_path: Path):
     """Analyze a single dataset."""
-    dataset_name, file_path = args
+    logger.info(f"\nProcessing dataset: {dataset_name}")
+    logger.info("=" * 50)
     data = load_and_prepare_data(file_path)
     if data is None:
-        return {dataset_name: None}
+        return
 
     stats = calculate_missing_index_stats(data)
     logit_model = perform_logistic_regression(data)
     ols_model = perform_linear_regression(data)
     plot_accuracy_vs_index(stats, dataset_name)
 
-    return {dataset_name: {
-        'stats': stats,
-        'logit_model': logit_model,
-        'ols_model': ols_model,
-        'data_types': data.dtypes
-    }}
+    logger.info(f"\n{dataset_name} Dataset Analysis:")
+    logger.info("=" * 50)
+    logger.info("Statistical Analysis of Normalized Missing Index and Prediction Accuracy:")
+    logger.info(f"\n{stats}\n")
+    logger.info("Data Types:")
+    logger.info(f"{data.dtypes}\n")
+    if logit_model is not None:
+        logger.info("Logistic Regression Analysis Summary:")
+        logger.info(f"\n{logit_model.summary()}\n")
+    else:
+        logger.info("Logistic Regression Analysis failed.\n")
+    if ols_model is not None:
+        logger.info("Linear Regression Analysis Summary:")
+        logger.info(f"\n{ols_model.summary()}\n")
+    else:
+        logger.info("Linear Regression Analysis failed.\n")
 
 def main():
-    results = {}
-    with ProcessPoolExecutor() as executor:
-        futures = [executor.submit(analyze_dataset, (name, path)) for name, path in DATASET_PATHS.items()]
-        for future in as_completed(futures):
-            results.update(future.result())
-
-    for dataset_name, result in results.items():
-        if result is not None:
-            logger.info(f"\n{dataset_name} Dataset Analysis:")
-            logger.info("Statistical Analysis of Normalized Missing Index and Prediction Accuracy:")
-            logger.info(f"\n{result['stats']}")
-            logger.info("\nData Types:")
-            logger.info(f"{result['data_types']}")
-            if result['logit_model'] is not None:
-                logger.info("\nLogistic Regression Analysis Summary:")
-                logger.info(f"\n{result['logit_model'].summary()}")
-            else:
-                logger.info("\nLogistic Regression Analysis failed.")
-            if result['ols_model'] is not None:
-                logger.info("\nLinear Regression Analysis Summary:")
-                logger.info(f"\n{result['ols_model'].summary()}")
-            else:
-                logger.info("\nLinear Regression Analysis failed.")
+    for name, path in DATASET_PATHS.items():
+        analyze_dataset(name, path)
 
 if __name__ == "__main__":
     main()
