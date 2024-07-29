@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict
 
 # Define dataset paths
-datasets: Dict[str, Path] = {
+DATASET_PATHS: Dict[str, Path] = {
     "CLMET3": Path('main/data/outputs/csv/sorted_tokens_clmet_context_sensitive_split0.5_qrange7-7_prediction.csv'),
     "Lampeter": Path('main/data/outputs/csv/sorted_tokens_lampeter_context_sensitive_split0.5_qrange7-7_prediction.csv'),
     "Edges": Path('main/data/outputs/csv/sorted_tokens_openEdges_context_sensitive_split0.5_qrange7-7_prediction.csv'),
@@ -46,7 +46,7 @@ def load_datasets(paths: Dict[str, Path]) -> Dict[str, pd.DataFrame]:
 
 def main():
     output_dir = Path('output/prediction_plots')
-    datasets = load_datasets(datasets)
+    datasets = load_datasets(DATASET_PATHS)
     
     # Plot for each individual dataset
     for name, data in datasets.items():

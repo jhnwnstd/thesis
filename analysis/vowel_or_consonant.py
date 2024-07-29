@@ -35,7 +35,7 @@ def is_vowel(char: str) -> bool:
 def preprocess_data(file_path: Path) -> Optional[pd.DataFrame]:
     """Preprocess data for analysis."""
     try:
-        data = pd.read_csv(file_path, usecols=['Tested_Word', 'Original_Word', 'Top1_Is_Accurate', 'Correct_Letter(s)'])
+        data = pd.read_csv(file_path, usecols=['Tested_Word', 'Original_Word', 'Top1_Is_Accurate', 'Correct_Letters'])
         logger.info(f"Data loaded successfully from {file_path}")
     except Exception as e:
         logger.error(f"Error loading data from {file_path}: {str(e)}")
@@ -45,8 +45,8 @@ def preprocess_data(file_path: Path) -> Optional[pd.DataFrame]:
     data['Word_Length'] = data['Original_Word'].str.len()
     data['Normalized_Missing_Letter_Position'] = (data['Missing_Letter_Position'] / (data['Word_Length'] - 1)).fillna(0)
     
-    if 'Correct_Letter(s)' in data.columns:
-        data['is_vowel'] = data['Correct_Letter(s)'].str[0].apply(is_vowel).astype(int)
+    if 'Correct_Letters' in data.columns:
+        data['is_vowel'] = data['Correct_Letters'].str[0].apply(is_vowel).astype(int)
     else:
         data['is_vowel'] = 0
 
