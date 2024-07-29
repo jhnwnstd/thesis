@@ -25,7 +25,7 @@ def load_and_preprocess(path: Path) -> Tuple[pd.DataFrame, pd.Series]:
     df['Missing_Letter_Index'] = df['Original_Word'].str.find("_")
     df['Relative_Position'] = df['Missing_Letter_Index'] / df['Word_Length'].clip(lower=1)
     df['Top1_Predicted_Letter_is_Vowel'] = df['Top1_Predicted_Letter'].apply(is_vowel)
-    df['Correct_Letter_is_Vowel'] = df['Correct_Letter(s)'].apply(is_vowel)
+    df['Correct_Letter_is_Vowel'] = df['Correct_Letters'].apply(is_vowel)
 
     features = df[['Word_Length', 'Relative_Position', 'Top1_Predicted_Letter_is_Vowel', 'Correct_Letter_is_Vowel']]
     target = df['Top1_Is_Accurate']
