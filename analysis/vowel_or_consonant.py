@@ -4,8 +4,6 @@ from pathlib import Path
 from enum import Enum
 import statsmodels.formula.api as smf
 from statsmodels.discrete.discrete_model import LogitResults
-import matplotlib.pyplot as plt
-import seaborn as sns
 import logging
 from typing import Optional, Dict, Tuple
 import functools
@@ -73,26 +71,6 @@ def run_logistic_regression(data: pd.DataFrame, dataset_name: str) -> Optional[L
         logger.error(f"Error in logistic regression for {dataset_name}: {str(e)}")
         return None
 
-def plot_coefficients(model: LogitResults, dataset_name: str):
-    """Plot coefficients from the logistic regression model."""
-    coeffs = model.params
-    conf_ints = model.conf_int()
-    
-    plt.figure(figsize=(10, 6))
-    sns.pointplot(x=coeffs.index, y=coeffs.values, linestyles='', markers='o')
-    plt.errorbar(x=range(len(coeffs)), y=coeffs.values, 
-                 yerr=(conf_ints[1] - conf_ints[0])/2, fmt='none', c='black')
-    plt.xticks(rotation=45, ha='right')
-    plt.title(f'Logistic Regression Coefficients for {dataset_name}')
-    
-    # Define the save path for the plot
-    save_dir = Path('output/letter_index_plots')
-    save_dir.mkdir(parents=True, exist_ok=True)
-    save_path = save_dir / f'{dataset_name}_coefficients.png'
-    plt.tight_layout()
-    plt.savefig(save_path)
-    plt.close()
-
 def process_dataset(dataset_name: str, file_path: Path) -> Tuple[str, Optional[pd.DataFrame], Optional[LogitResults]]:
     """Process a single dataset."""
     data = preprocess_data(file_path)
@@ -110,7 +88,6 @@ def main():
                 'data': data,
                 'model': model
             }
-            plot_coefficients(model, dataset_name)
 
     # Compare results across datasets
     for dataset_name, result in results.items():
