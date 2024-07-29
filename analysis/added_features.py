@@ -1,19 +1,18 @@
 import nltk
-from nltk.corpus import cmudict
-from nltk.corpus import wordnet
+from nltk.corpus import cmudict, wordnet
 from pathlib import Path
 import pandas as pd
 import re
 
-# Download required resources manually once
-nltk.download('cmudict')
-nltk.download('averaged_perceptron_tagger')
-nltk.download('wordnet')
-nltk.download('punkt')
-nltk.download('stopwords')
+# Download required resources if not already available
+nltk.download('cmudict', quiet=True)
+nltk.download('averaged_perceptron_tagger', quiet=True)
+nltk.download('wordnet', quiet=True)
+nltk.download('punkt', quiet=True)
+nltk.download('stopwords', quiet=True)
 
 # Initialize syllable dictionary
-d = cmudict.dict()
+cmu_dict = cmudict.dict()
 
 # Paths to datasets
 DATASET_PATHS = {
@@ -25,14 +24,13 @@ DATASET_PATHS = {
 }
 
 # Function to count syllables using fallback mechanism
-def count_syllables(word):
-    try:
-        # Try to get the syllable count from CMU dictionary
-        return [len(list(y for y in x if y[-1].isdigit())) for x in d[word.lower()]][0]
-    except KeyError:
-        # Fallback: Count vowel groups as an estimate of syllable count
+def count_syllables(word, cmu_dict):
+    word = word.lower()
+    if word in cmu_dict:
+        return len([y for y in cmu_dict[word][0] if y[-1].isdigit()])
+    else:
         word = re.sub(r'[^a-zA-Z]', '', word)  # Remove non-alphabetic characters
-        return len(re.findall(r'[aeiouy]+', word.lower())) # Count vowel groups as syllables
+        return len(re.findall(r'[aeiouy]+', word.lower()))  # Count vowel groups as syllables
 
 # Function to get part of speech
 def get_part_of_speech(word):
@@ -41,23 +39,20 @@ def get_part_of_speech(word):
     return tag_dict.get(tag, wordnet.NOUN)
 
 # Function to add features to dataset
-def add_features_to_dataset(data):
-    data['Syllable_Count'] = data['Original_Word'].apply(count_syllables)
+def add_features_to_dataset(data, cmu_dict):
+    data['Syllable_Count'] = data['Original_Word'].apply(lambda word: count_syllables(word, cmu_dict))
     data['Part_of_Speech'] = data['Original_Word'].apply(get_part_of_speech)
     return data
 
-# Process all datasets
-for name, path in DATASET_PATHS.items():
-    # Load dataset
-    data = pd.read_csv(path)
-    
-    # Add features to the dataset
-    data = add_features_to_dataset(data)
-    
-    # Save the updated dataset
-    output_path = f'main/data/outputs/csv/{name}_with_features.csv'
-    data.to_csv(output_path, index=False)
-    
-    # Display the first few rows of the updated dataset
-    print(f"Dataset: {name}")
-    print(data.head(), "\n")
+# Function to process and save datasets
+def process_datasets(dataset_paths, cmu_dict):
+    for name, path in dataset_paths.items():
+        data = pd.read_csv(path)
+        data = add_features_to_dataset(data, cmu_dict)
+        output_path = f'main/data/outputs/csv/{name}_with_features.csv'
+        data.to_csv(output_path, index=False)
+        print(f"Dataset: {name}")
+        print(data.head(), "\n")
+
+# Execute the processing
+process_datasets(DATASET_PATHS, cmu_dict)
