@@ -16,11 +16,11 @@ cmu_dict = cmudict.dict()
 
 # Paths to datasets
 DATASET_PATHS = {
-    "CLMET3": 'main/data/outputs/csv/sorted_tokens_clmet_context_sensitive_split0.5_qrange7-7_prediction.csv',
-    "Lampeter": 'main/data/outputs/csv/sorted_tokens_lampeter_context_sensitive_split0.5_qrange7-7_prediction.csv',
-    "Edges": 'main/data/outputs/csv/sorted_tokens_openEdges_context_sensitive_split0.5_qrange7-7_prediction.csv',
-    "CMU": 'main/data/outputs/csv/cmudict_context_sensitive_split0.5_qrange7-7_prediction.csv',
-    "Brown": 'main/data/outputs/csv/brown_context_sensitive_split0.5_qrange7-7_prediction.csv'
+    "CLMET3": Path('main/data/outputs/csv/sorted_tokens_clmet_context_sensitive_split0.5_qrange7-7_prediction.csv'),
+    "Lampeter": Path('main/data/outputs/csv/sorted_tokens_lampeter_context_sensitive_split0.5_qrange7-7_prediction.csv'),
+    "Edges": Path('main/data/outputs/csv/sorted_tokens_openEdges_context_sensitive_split0.5_qrange7-7_prediction.csv'),
+    "CMU": Path('main/data/outputs/csv/cmudict_context_sensitive_split0.5_qrange7-7_prediction.csv'),
+    "Brown": Path('main/data/outputs/csv/brown_context_sensitive_split0.5_qrange7-7_prediction.csv')
 }
 
 def count_syllables(word, cmu_dict):
@@ -42,6 +42,7 @@ def count_syllables(word, cmu_dict):
     else:
         # Remove non-alphabetic characters and count vowel groups as syllables
         word = re.sub(r'[^a-zA-Z]', '', word)
+        # Count vowel groups as syllables
         return len(re.findall(r'[aeiouy]+', word.lower()))
 
 def get_part_of_speech(word):
@@ -54,8 +55,11 @@ def get_part_of_speech(word):
     Returns:
     str: The part of speech tag in WordNet format.
     """
+    # Get the first letter of the POS tag and map it to WordNet format
     tag = nltk.pos_tag([word])[0][1][0].upper()
+    # Map the tag to WordNet format
     tag_dict = {"J": wordnet.ADJ, "N": wordnet.NOUN, "V": wordnet.VERB, "R": wordnet.ADV}
+    # Return the WordNet tag or default to noun
     return tag_dict.get(tag, wordnet.NOUN)
 
 def add_features_to_dataset(data, cmu_dict):
@@ -69,9 +73,7 @@ def add_features_to_dataset(data, cmu_dict):
     Returns:
     DataFrame: The dataset with added features.
     """
-    # Add syllable count feature
     data['Syllable_Count'] = data['Original_Word'].apply(lambda word: count_syllables(word, cmu_dict))
-    # Add part of speech feature
     data['Part_of_Speech'] = data['Original_Word'].apply(get_part_of_speech)
     return data
 
@@ -85,17 +87,15 @@ def process_datasets(dataset_paths, cmu_dict):
     cmu_dict (dict): The CMU Pronouncing Dictionary.
     """
     for name, path in dataset_paths.items():
-        # Read the dataset from CSV
-        data = pd.read_csv(path)
-        # Add features to the dataset
-        data = add_features_to_dataset(data, cmu_dict)
-        # Define the output path for the updated dataset
-        output_path = f'main/data/outputs/csv/{name}_with_features.csv'
-        # Save the updated dataset to a new CSV file
-        data.to_csv(output_path, index=False)
-        # Print a summary of the dataset
-        print(f"Dataset: {name}")
-        print(data.head(), "\n")
+        try:
+            data = pd.read_csv(path)
+            data = add_features_to_dataset(data, cmu_dict)
+            output_path = path.parent / f"{name}_with_features.csv"
+            data.to_csv(output_path, index=False)
+            print(f"Dataset: {name}")
+            print(data.head(), "\n")
+        except Exception as e:
+            print(f"Failed to process dataset {name}: {e}")
 
 # Execute the processing for all datasets
 process_datasets(DATASET_PATHS, cmu_dict)
