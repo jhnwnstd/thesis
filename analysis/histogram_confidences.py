@@ -10,20 +10,20 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Define dataset paths in a dictionary, mapping dataset names to their file paths
-DATASET_PATHS: Dict[str, str] = {
-    "CLMET3": 'main/data/outputs/csv/sorted_tokens_clmet_context_sensitive_split0.5_qrange7-7_prediction.csv',
-    "Lampeter": 'main/data/outputs/csv/sorted_tokens_lampeter_context_sensitive_split0.5_qrange7-7_prediction.csv',
-    "Edges": 'main/data/outputs/csv/sorted_tokens_openEdges_context_sensitive_split0.5_qrange7-7_prediction.csv',
-    "CMU": 'main/data/outputs/csv/cmudict_context_sensitive_split0.5_qrange7-7_prediction.csv',
-    "Brown": 'main/data/outputs/csv/brown_context_sensitive_split0.5_qrange7-7_prediction.csv'
+DATASET_PATHS: Dict[str, Path] = {
+    "CLMET3": Path('main/data/outputs/csv/sorted_tokens_clmet_context_sensitive_split0.5_qrange7-7_prediction.csv'),
+    "Lampeter": Path('main/data/outputs/csv/sorted_tokens_lampeter_context_sensitive_split0.5_qrange7-7_prediction.csv'),
+    "Edges": Path('main/data/outputs/csv/sorted_tokens_openEdges_context_sensitive_split0.5_qrange7-7_prediction.csv'),
+    "CMU": Path('main/data/outputs/csv/cmudict_context_sensitive_split0.5_qrange7-7_prediction.csv'),
+    "Brown": Path('main/data/outputs/csv/brown_context_sensitive_split0.5_qrange7-7_prediction.csv')
 }
 
-def load_dataset(args: Tuple[str, str]) -> Tuple[str, Optional[pd.DataFrame]]: 
+def load_dataset(args: Tuple[str, Path]) -> Tuple[str, Optional[pd.DataFrame]]: 
     """
     Loads dataset from the given path, handling errors.
 
     Args:
-        args (Tuple[str, str]): A tuple containing the dataset name and file path.
+        args (Tuple[str, Path]): A tuple containing the dataset name and file path.
 
     Returns:
         Tuple[str, Optional[pd.DataFrame]]: A tuple containing the dataset name and the loaded DataFrame (or None if loading failed).
@@ -91,16 +91,16 @@ def plot_histogram(ax: plt.Axes, dataset: pd.DataFrame, valid_color: str, invali
     # Calculate valid and invalid proportions
     valid_proportions, invalid_proportions = calculate_histogram_data(dataset, column_name, bins)
     
-    # Find the second bin where valid proportions exceed the threshold
+    # Find the first bin where valid proportions exceed the threshold
     threshold_bin_indices = np.where(valid_proportions >= threshold)[0]
     if len(threshold_bin_indices) > 0:
-        second_threshold_bin_index = threshold_bin_indices[0]
-        second_threshold_bin = bins[second_threshold_bin_index]
+        first_threshold_bin_index = threshold_bin_indices[0]
+        first_threshold_bin = bins[first_threshold_bin_index]
         
-        # Highlight the second threshold bin on the plot
-        ax.axvline(second_threshold_bin, color='black', linestyle='--')
-        ax.annotate(f'{second_threshold_bin:.2f}', xy=(second_threshold_bin, valid_proportions[second_threshold_bin_index]), 
-                    xytext=(second_threshold_bin + 0.05, valid_proportions[second_threshold_bin_index] - 0.05),
+        # Highlight the first threshold bin on the plot
+        ax.axvline(first_threshold_bin, color='black', linestyle='--')
+        ax.annotate(f'{first_threshold_bin:.2f}', xy=(first_threshold_bin, valid_proportions[first_threshold_bin_index]), 
+                    xytext=(first_threshold_bin + 0.05, valid_proportions[first_threshold_bin_index] - 0.05),
                     arrowprops=dict(facecolor='black', shrink=0.05), fontsize=16, color='black', fontweight='bold')
         ax.plot([], [], color='black', linestyle='--', label=f'Threshold at {threshold*100:.0f}%')
 
