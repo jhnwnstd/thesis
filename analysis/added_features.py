@@ -25,8 +25,8 @@ DATASET_PATHS = {
 
 def count_syllables(word, cmu_dict):
     """
-    Count the number of syllables in a word using the CMU Pronouncing Dictionary
-    as the primary method and a fallback method based on vowel group counting.
+    Count the number of syllables in a word using a simplified improved method.
+    Handles compound words by splitting them into parts.
 
     Parameters:
     word (str): The word to count syllables for.
@@ -35,15 +35,32 @@ def count_syllables(word, cmu_dict):
     Returns:
     int: The number of syllables in the word.
     """
-    word = word.lower()
+    word = word.lower().strip()
+    
+    # Handle compound words
+    if '-' in word:
+        return sum(count_syllables(part, cmu_dict) for part in word.split('-'))
+    
+    # Check CMU dictionary first
     if word in cmu_dict:
-        # Use the CMU dictionary to count syllables
-        return len([y for y in cmu_dict[word][0] if y[-1].isdigit()])
-    else:
-        # Remove non-alphabetic characters and count vowel groups as syllables
-        word = re.sub(r'[^a-zA-Z]', '', word)
-        # Count vowel groups as syllables
-        return len(re.findall(r'[aeiouy]+', word.lower()))
+        return len([phoneme for phoneme in cmu_dict[word][0] if phoneme[-1].isdigit()])
+    
+    # Remove non-alphabetic characters
+    word = re.sub(r'[^a-z]', '', word)
+    
+    # Count vowel groups
+    count = len(re.findall(r'[aeiouy]+', word))
+    
+    # Adjust for common patterns
+    if word.endswith('e'):
+        count -= 1  # Often silent 'e'
+    if word.endswith('le') and len(word) > 2 and word[-3] not in 'aeiou':
+        count += 1  # '-le' often forms a syllable
+    if word.endswith('es') or word.endswith('ed'):
+        count -= 1  # Often these don't add a syllable
+    
+    # Ensure at least one syllable
+    return max(1, count)
 
 def get_part_of_speech(word):
     """
