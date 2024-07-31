@@ -25,7 +25,7 @@ DATASET_PATHS = {
 
 def count_syllables(word, cmu_dict):
     """
-    Count the number of syllables in a word using a simplified improved method.
+    Count the number of syllables in a word using a simplified method.
     Handles compound words by splitting them into parts.
 
     Parameters:
