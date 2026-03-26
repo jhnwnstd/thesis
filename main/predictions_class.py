@@ -1,12 +1,14 @@
-from collections import defaultdict
 import heapq
+from collections import defaultdict
+
 import numpy as np
+
 
 class Predictions:
     def __init__(self, model, q_range, unique_characters):
         """
         Initialize the Predictions class with language models, a range of n-gram sizes, and unique characters from the corpus.
-        
+
         Parameters:
         - model (dict): Dictionary of n-gram models keyed by n-gram size.
         - q_range (list): List of n-gram sizes to use.
@@ -16,7 +18,9 @@ class Predictions:
         self.q_range = q_range
         self.unique_characters = unique_characters
 
-    def _extract_contexts(self, test_word, q, missing_letter_index, with_boundaries=True):
+    def _extract_contexts(
+        self, test_word, q, missing_letter_index, with_boundaries=True
+    ):
         """
         Extract left and right contexts around the missing letter.
 
@@ -36,22 +40,38 @@ class Predictions:
         left_context_size = min(missing_letter_index, max_context_size)
 
         # Similarly, calculate the size of the right context, taking into account the word length and position of the missing letter
-        right_context_size = min(len(test_word) - missing_letter_index - 1, max_context_size)
+        right_context_size = min(
+            len(test_word) - missing_letter_index - 1, max_context_size
+        )
 
         if with_boundaries:
             # If with_boundaries is True, include boundary markers at the start and end of the word
             test_word_with_boundaries = f"<s> {test_word} </s>"
             # Extract the left context, considering the added boundary markers and adjusted context size
-            left_context = test_word_with_boundaries[max(4, missing_letter_index - left_context_size + 4):missing_letter_index + 4]
+            left_context = test_word_with_boundaries[
+                max(
+                    4, missing_letter_index - left_context_size + 4
+                ) : missing_letter_index
+                + 4
+            ]
             # Extract the right context similarly, adjusting for the added boundary markers
-            right_context = test_word_with_boundaries[missing_letter_index + 5:missing_letter_index + 5 + right_context_size]
+            right_context = test_word_with_boundaries[
+                missing_letter_index
+                + 5 : missing_letter_index
+                + 5
+                + right_context_size
+            ]
         else:
             # Extract contexts without boundary markers, using the dynamically calculated context sizes
-            left_context = test_word[:missing_letter_index][-left_context_size:]
-            right_context = test_word[missing_letter_index + 1:][:right_context_size]
+            left_context = test_word[:missing_letter_index][
+                -left_context_size:
+            ]
+            right_context = test_word[missing_letter_index + 1 :][
+                :right_context_size
+            ]
 
         # Return the extracted contexts, ensuring any leading or trailing whitespace is removed
-        return ' '.join(left_context.strip()), ' '.join(right_context.strip())
+        return " ".join(left_context.strip()), " ".join(right_context.strip())
 
     def _format_sequence(self, left_context, letter, right_context):
         """
@@ -95,17 +115,28 @@ class Predictions:
         - list: List of letters sorted by their normalized probabilities.
         """
         # Convert log probabilities to actual probabilities for easier interpretation
-        probabilities = {letter: np.exp(log_prob) for letter, log_prob in log_probabilities.items()}
+        probabilities = {
+            letter: np.exp(log_prob)
+            for letter, log_prob in log_probabilities.items()
+        }
 
         # Normalize the probabilities so they sum up to 1
         total_prob = sum(probabilities.values())
-        normalized_probabilities = {letter: prob / total_prob for letter, prob in probabilities.items()}
+        normalized_probabilities = {
+            letter: prob / total_prob for letter, prob in probabilities.items()
+        }
 
         # Select all predictions sorted by normalized probability in descending order
-        all_predictions = heapq.nlargest(len(normalized_probabilities), normalized_probabilities.items(), key=lambda item: item[1])
+        all_predictions = heapq.nlargest(
+            len(normalized_probabilities),
+            normalized_probabilities.items(),
+            key=lambda item: item[1],
+        )
         return all_predictions
 
-    def _get_log_probabilities(self, test_word, missing_letter_index, with_boundaries):
+    def _get_log_probabilities(
+        self, test_word, missing_letter_index, with_boundaries
+    ):
         """
         Get log probabilities for each candidate letter for a specific missing letter position.
 
@@ -127,20 +158,31 @@ class Predictions:
                 continue
 
             # Extract the left and right contexts around the missing letter
-            left_context, right_context = self._extract_contexts(test_word, q, missing_letter_index, with_boundaries)
+            left_context, right_context = self._extract_contexts(
+                test_word, q, missing_letter_index, with_boundaries
+            )
 
             for letter in self.unique_characters:
                 # Create a sequence by inserting the candidate letter between contexts
-                sequence = self._format_sequence(left_context, letter, right_context)
+                sequence = self._format_sequence(
+                    left_context, letter, right_context
+                )
                 # Calculate the log probability of this sequence
-                log_prob = self._calculate_log_probability(model, sequence, bos=with_boundaries, eos=with_boundaries)
+                log_prob = self._calculate_log_probability(
+                    model, sequence, bos=with_boundaries, eos=with_boundaries
+                )
                 # Append the log probability to the corresponding letter's list
                 log_probabilities[letter].append(log_prob)
 
         # Sum the log probabilities for each letter using logaddexp for numerical stability
-        return {letter: np.logaddexp.reduce(log_probs) for letter, log_probs in log_probabilities.items()}
+        return {
+            letter: np.logaddexp.reduce(log_probs)
+            for letter, log_probs in log_probabilities.items()
+        }
 
-    def _predict_missing_letter(self, test_word, missing_letter_index, with_boundaries=True):
+    def _predict_missing_letter(
+        self, test_word, missing_letter_index, with_boundaries=True
+    ):
         """
         Predict the missing letter at a specific position using context-sensitive approach.
 
@@ -153,7 +195,9 @@ class Predictions:
         - str: The most probable missing letter.
         """
         # Get log probabilities for each candidate letter for the specific missing letter position
-        log_probabilities = self._get_log_probabilities(test_word, missing_letter_index, with_boundaries)
+        log_probabilities = self._get_log_probabilities(
+            test_word, missing_letter_index, with_boundaries
+        )
         # Select all predictions and return the most probable letter
         predictions = self._select_all_predictions(log_probabilities)
         return predictions[0][0]
@@ -169,9 +213,11 @@ class Predictions:
         - list: Sorted list of predicted letters and their probabilities.
         """
         # Find the index of the missing letter in the word
-        missing_letter_index = test_word.index('_')
+        missing_letter_index = test_word.index("_")
         # Get log probabilities for each candidate letter for the specific missing letter position
-        log_probabilities = self._get_log_probabilities(test_word, missing_letter_index, with_boundaries=True)
+        log_probabilities = self._get_log_probabilities(
+            test_word, missing_letter_index, with_boundaries=True
+        )
         # Select all predictions and return them sorted by probability
         return self._select_all_predictions(log_probabilities)
 
@@ -186,9 +232,11 @@ class Predictions:
         - list: Sorted list of predicted letters and their probabilities.
         """
         # Find the index of the missing letter in the word
-        missing_letter_index = test_word.index('_')
+        missing_letter_index = test_word.index("_")
         # Get log probabilities for each candidate letter for the specific missing letter position
-        log_probabilities = self._get_log_probabilities(test_word, missing_letter_index, with_boundaries=False)
+        log_probabilities = self._get_log_probabilities(
+            test_word, missing_letter_index, with_boundaries=False
+        )
         # Select all predictions and return them sorted by probability
         return self._select_all_predictions(log_probabilities)
 
@@ -203,7 +251,7 @@ class Predictions:
         - list: Sorted list of predicted letters and their probabilities.
         """
         # Find the index of the missing letter in the word
-        missing_letter_index = test_word.index('_')
+        missing_letter_index = test_word.index("_")
         # Dictionary to store log probabilities of each letter
         log_probabilities = {}
 
@@ -218,16 +266,24 @@ class Predictions:
 
         for letter in self.unique_characters:
             # Create a candidate word by replacing the missing letter with the current candidate letter
-            candidate_word = formatted_test_word[:missing_letter_index * 2] + letter + formatted_test_word[missing_letter_index * 2 + 1:]
+            candidate_word = (
+                formatted_test_word[: missing_letter_index * 2]
+                + letter
+                + formatted_test_word[missing_letter_index * 2 + 1 :]
+            )
             # Calculate the log probability of this candidate word
-            log_probability = self._calculate_log_probability(model, candidate_word, bos=False, eos=False)
+            log_probability = self._calculate_log_probability(
+                model, candidate_word, bos=False, eos=False
+            )
             # Store the log probability for the current letter
             log_probabilities[letter] = log_probability
 
         # Select all predictions and return them sorted by probability
         return self._select_all_predictions(log_probabilities)
-    
-    def predict_multiple_missing_letters(self, test_word, with_boundaries=True):
+
+    def predict_multiple_missing_letters(
+        self, test_word, with_boundaries=True
+    ):
         """
         Predict multiple missing letters in a word using optimized beam search and log probabilities.
 
@@ -239,7 +295,9 @@ class Predictions:
         - str: The word with predicted missing letters filled in.
         """
         # Find the indices of all missing letters in the word
-        missing_letter_indices = [i for i, char in enumerate(test_word) if char == '_']
+        missing_letter_indices = [
+            i for i, char in enumerate(test_word) if char == "_"
+        ]
 
         # Initialize the beam with the original test word and an initial score of 0
         beam = [(0, test_word, missing_letter_indices)]
@@ -272,21 +330,39 @@ class Predictions:
 
                     # Check if the log probabilities are already cached
                     if (word, missing_letter_index) in log_prob_cache:
-                        log_probabilities = log_prob_cache[(word, missing_letter_index)]
+                        log_probabilities = log_prob_cache[
+                            (word, missing_letter_index)
+                        ]
                     else:
                         # Get log probabilities for each candidate letter at the current missing index
-                        log_probabilities = self._get_log_probabilities(word, missing_letter_index, with_boundaries)
-                        log_prob_cache[(word, missing_letter_index)] = log_probabilities
+                        log_probabilities = self._get_log_probabilities(
+                            word, missing_letter_index, with_boundaries
+                        )
+                        log_prob_cache[(word, missing_letter_index)] = (
+                            log_probabilities
+                        )
 
                     # Sort the candidate letters by their log probabilities in descending order
-                    sorted_candidates = sorted(log_probabilities.items(), key=lambda x: x[1], reverse=True)
+                    sorted_candidates = sorted(
+                        log_probabilities.items(),
+                        key=lambda x: x[1],
+                        reverse=True,
+                    )
 
                     # Dynamically expand the beam based on the quality of the candidates
-                    expanded_beam_width = min(len(sorted_candidates), max_beam_width)
+                    expanded_beam_width = min(
+                        len(sorted_candidates), max_beam_width
+                    )
 
-                    for letter, log_prob in sorted_candidates[:expanded_beam_width]:
+                    for letter, log_prob in sorted_candidates[
+                        :expanded_beam_width
+                    ]:
                         # Create a new word by replacing the missing letter with the candidate letter
-                        new_word = word[:missing_letter_index] + letter + word[missing_letter_index+1:]
+                        new_word = (
+                            word[:missing_letter_index]
+                            + letter
+                            + word[missing_letter_index + 1 :]
+                        )
                         # Calculate the new score by adding the log probability
                         new_score = score + log_prob
                         # Update the indices to predict the next missing letter
@@ -297,7 +373,9 @@ class Predictions:
                             return new_word
 
                         # Add the new word with its score and remaining indices to the new beam
-                        heapq.heappush(new_beam, (new_score, new_word, new_indices))
+                        heapq.heappush(
+                            new_beam, (new_score, new_word, new_indices)
+                        )
 
             # Update the beam with the top candidates for the next iteration
             beam = heapq.nlargest(beam_width, new_beam)

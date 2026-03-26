@@ -1,14 +1,19 @@
 import csv
 import logging
-from predictions_class import Predictions
 import random
+
+from predictions_class import Predictions
+
 
 class EvaluateModel:
     """
     EvaluateModel class is responsible for evaluating language models using various prediction methods,
     computing metrics, and exporting results.
     """
-    def __init__(self, corpus_manager, split_type=None, log_initialization_details=True):
+
+    def __init__(
+        self, corpus_manager, split_type=None, log_initialization_details=True
+    ):
         """
         Initialize the EvaluateModel with necessary data and configurations.
 
@@ -35,8 +40,12 @@ class EvaluateModel:
         self.unique_character_count = len(unique_characters)
 
         # Initialize prediction class
-        self.q_range = range(self.config.q_range[0], self.config.q_range[1] + 1)
-        self.predictor = Predictions(self.model, self.q_range, unique_characters)
+        self.q_range = range(
+            self.config.q_range[0], self.config.q_range[1] + 1
+        )
+        self.predictor = Predictions(
+            self.model, self.q_range, unique_characters
+        )
 
         # Logging model initialization details
         if log_initialization_details:
@@ -53,28 +62,41 @@ class EvaluateModel:
             A function representing the selected prediction method.
         """
         prediction_methods = {
-            'context_sensitive': self.predictor.context_sensitive,
-            'context_no_boundary': self.predictor.context_no_boundary,
-            'base_prediction': self.predictor.base_prediction
+            "context_sensitive": self.predictor.context_sensitive,
+            "context_no_boundary": self.predictor.context_no_boundary,
+            "base_prediction": self.predictor.base_prediction,
         }
-        return prediction_methods.get(self.config.prediction_method_name, self.predictor.context_sensitive)
+        return prediction_methods.get(
+            self.config.prediction_method_name,
+            self.predictor.context_sensitive,
+        )
 
     def log_initialization_details(self):
         """
         Log important details about the model initialization and configuration.
         This aids in experiment tracking and reproducibility.
         """
-        logging.info(f'Language Model for {self.corpus_name} initialized with:')
-        logging.info(f'Seed: {self.config.seed}')
-        logging.info(f'Q-gram Range: {self.config.q_range}')
-        logging.info(f'Train-Test Split Configuration: {self.config.split_config}')
-        logging.info(f'Training Set Size: {len(self.train_set)}')
-        logging.info(f'Testing Set Size: {len(self.test_set)}')
-        logging.info(f'Vowel Replacement Ratio: {self.config.vowel_replacement_ratio}')
-        logging.info(f'Consonant Replacement Ratio: {self.config.consonant_replacement_ratio}')
-        logging.info(f'Unique Character Count: {self.unique_character_count}')
-        logging.info(f'Minimum Word Length: {self.config.min_word_length}')
-        logging.info(f'Number of Replacements per Word: {self.config.num_replacements}')
+        logging.info(
+            f"Language Model for {self.corpus_name} initialized with:"
+        )
+        logging.info(f"Seed: {self.config.seed}")
+        logging.info(f"Q-gram Range: {self.config.q_range}")
+        logging.info(
+            f"Train-Test Split Configuration: {self.config.split_config}"
+        )
+        logging.info(f"Training Set Size: {len(self.train_set)}")
+        logging.info(f"Testing Set Size: {len(self.test_set)}")
+        logging.info(
+            f"Vowel Replacement Ratio: {self.config.vowel_replacement_ratio}"
+        )
+        logging.info(
+            f"Consonant Replacement Ratio: {self.config.consonant_replacement_ratio}"
+        )
+        logging.info(f"Unique Character Count: {self.unique_character_count}")
+        logging.info(f"Minimum Word Length: {self.config.min_word_length}")
+        logging.info(
+            f"Number of Replacements per Word: {self.config.num_replacements}"
+        )
 
     def compute_metrics(self, predictions) -> dict:
         """
@@ -90,15 +112,32 @@ class EvaluateModel:
         validity_counts = {1: 0, 2: 0, 3: 0}
         total_test_words = len(self.test_set)
 
-        for modified_word, missing_letters, _, all_predictions, _ in predictions:
+        for (
+            modified_word,
+            missing_letters,
+            _,
+            all_predictions,
+            _,
+        ) in predictions:
             # Validate the format of predictions
-            if not all(isinstance(pred, tuple) and len(pred) == 2 for pred in all_predictions):
-                logging.error(f'Invalid prediction format: {all_predictions}')
+            if not all(
+                isinstance(pred, tuple) and len(pred) == 2
+                for pred in all_predictions
+            ):
+                logging.error(f"Invalid prediction format: {all_predictions}")
                 continue
 
             # Determine the rank of the first correct prediction
-            correct_rank = next((rank for rank, (predicted_letter, _) in enumerate(all_predictions, start=1)
-                                 if predicted_letter in missing_letters), None)
+            correct_rank = next(
+                (
+                    rank
+                    for rank, (predicted_letter, _) in enumerate(
+                        all_predictions, start=1
+                    )
+                    if predicted_letter in missing_letters
+                ),
+                None,
+            )
 
             if correct_rank:
                 # Increment accuracy counts for all ranks up to the correct rank
@@ -108,22 +147,36 @@ class EvaluateModel:
             valid_word_checked = [False] * 3
 
             # Check the validity of the top 3 predictions
-            for rank, (predicted_letter, _) in enumerate(all_predictions[:3], start=1):
-                if not valid_word_checked[rank-1]:
-                    reconstructed_word = modified_word.replace('_', predicted_letter, 1)
+            for rank, (predicted_letter, _) in enumerate(
+                all_predictions[:3], start=1
+            ):
+                if not valid_word_checked[rank - 1]:
+                    reconstructed_word = modified_word.replace(
+                        "_", predicted_letter, 1
+                    )
                     if reconstructed_word in self.all_words:
                         for i in range(rank, 4):
-                            if not valid_word_checked[i-1]:
+                            if not valid_word_checked[i - 1]:
                                 validity_counts[i] += 1
-                                valid_word_checked[i-1] = True
+                                valid_word_checked[i - 1] = True
 
         # Calculate accuracy and validity as percentages
-        total_accuracy = {k: accuracy_counts[k] / total_test_words for k in accuracy_counts}
-        total_validity = {k: validity_counts[k] / total_test_words for k in validity_counts}
+        total_accuracy = {
+            k: accuracy_counts[k] / total_test_words for k in accuracy_counts
+        }
+        total_validity = {
+            k: validity_counts[k] / total_test_words for k in validity_counts
+        }
 
-        return {'accuracy': total_accuracy, 'validity': total_validity, 'total_words': total_test_words}
+        return {
+            "accuracy": total_accuracy,
+            "validity": total_validity,
+            "total_words": total_test_words,
+        }
 
-    def evaluate_character_predictions(self, prediction_method) -> tuple[dict, list]:
+    def evaluate_character_predictions(
+        self, prediction_method
+    ) -> tuple[dict, list]:
         """
         Evaluate the model's character-level predictions using the specified method.
 
@@ -138,22 +191,47 @@ class EvaluateModel:
         for modified_word, target_letters, original_word in self.test_set:
             try:
                 all_predictions = prediction_method(modified_word)
-                if not isinstance(all_predictions, list) or not all(isinstance(pred, tuple) and len(pred) == 2 for pred in all_predictions):
-                    logging.error(f'Unexpected prediction format for {modified_word}: {all_predictions}')
+                if not isinstance(all_predictions, list) or not all(
+                    isinstance(pred, tuple) and len(pred) == 2
+                    for pred in all_predictions
+                ):
+                    logging.error(
+                        f"Unexpected prediction format for {modified_word}: {all_predictions}"
+                    )
                     continue
 
                 # Determine the rank of the correct letter in the predictions
-                correct_letter_rank = next((rank for rank, (retrieved_letter, _) in enumerate(all_predictions, start=1)
-                                            if retrieved_letter in target_letters), None)
+                correct_letter_rank = next(
+                    (
+                        rank
+                        for rank, (retrieved_letter, _) in enumerate(
+                            all_predictions, start=1
+                        )
+                        if retrieved_letter in target_letters
+                    ),
+                    None,
+                )
 
-                predictions.append((modified_word, target_letters, original_word, all_predictions[:3], correct_letter_rank))
+                predictions.append(
+                    (
+                        modified_word,
+                        target_letters,
+                        original_word,
+                        all_predictions[:3],
+                        correct_letter_rank,
+                    )
+                )
             except Exception as e:
-                logging.error(f"Error predicting for {modified_word}: {e}", exc_info=True)
+                logging.error(
+                    f"Error predicting for {modified_word}: {e}", exc_info=True
+                )
 
         evaluation_metrics = self.compute_metrics(predictions)
         return evaluation_metrics, predictions
 
-    def save_summary_stats_txt(self, evaluation_metrics, predictions, prediction_method_name):
+    def save_summary_stats_txt(
+        self, evaluation_metrics, predictions, prediction_method_name
+    ):
         """
         Save a detailed summary of evaluation results to a text file.
 
@@ -162,45 +240,72 @@ class EvaluateModel:
             predictions: List of detailed prediction results.
             prediction_method_name: Name of the prediction method used.
         """
-        output_file_path = self.config.text_dir / f'{self.corpus_name}_predictions.txt'
+        output_file_path = (
+            self.config.text_dir / f"{self.corpus_name}_predictions.txt"
+        )
         try:
-            with output_file_path.open('w', encoding='utf-8', buffering=1) as file:  # Use buffered writing
+            with output_file_path.open(
+                "w", encoding="utf-8", buffering=1
+            ) as file:  # Use buffered writing
                 # Write general information about the evaluation
-                file.write(f'Prediction Method: {prediction_method_name}\n')
-                file.write(f'Unique Character Count: {self.unique_character_count}\n\n')
+                file.write(f"Prediction Method: {prediction_method_name}\n")
+                file.write(
+                    f"Unique Character Count: {self.unique_character_count}\n\n"
+                )
 
                 # Write accuracy and validity metrics for easy reference
-                accuracy = evaluation_metrics['accuracy']
-                validity = evaluation_metrics['validity']
-                file.write(f'TOP1 ACCURACY: {accuracy[1]:.2%}\n')
-                file.write(f'TOP2 ACCURACY: {accuracy[2]:.2%}\n')
-                file.write(f'TOP3 ACCURACY: {accuracy[3]:.2%}\n')
-                file.write(f'TOP1 VALIDITY: {validity[1]:.2%}\n')
-                file.write(f'TOP2 VALIDITY: {validity[2]:.2%}\n')
-                file.write(f'TOP3 VALIDITY: {validity[3]:.2%}\n\n')
+                accuracy = evaluation_metrics["accuracy"]
+                validity = evaluation_metrics["validity"]
+                file.write(f"TOP1 ACCURACY: {accuracy[1]:.2%}\n")
+                file.write(f"TOP2 ACCURACY: {accuracy[2]:.2%}\n")
+                file.write(f"TOP3 ACCURACY: {accuracy[3]:.2%}\n")
+                file.write(f"TOP1 VALIDITY: {validity[1]:.2%}\n")
+                file.write(f"TOP2 VALIDITY: {validity[2]:.2%}\n")
+                file.write(f"TOP3 VALIDITY: {validity[3]:.2%}\n\n")
 
                 # Write dataset information for context
-                file.write(f'Train Size: {len(self.train_set)}, Test Size: {len(self.test_set)}\n')
-                file.write(f'Vowel Ratio: {self.config.vowel_replacement_ratio}, '
-                           f'Consonant Ratio: {self.config.consonant_replacement_ratio}\n\n')
+                file.write(
+                    f"Train Size: {len(self.train_set)}, Test Size: {len(self.test_set)}\n"
+                )
+                file.write(
+                    f"Vowel Ratio: {self.config.vowel_replacement_ratio}, "
+                    f"Consonant Ratio: {self.config.consonant_replacement_ratio}\n\n"
+                )
 
                 # Process each prediction and write details
-                for mod_word, miss_letters, orig_word, top_preds, cor_letter_rank in predictions:
-                    file.write(f'Test Word: {mod_word}, Correct Letters: {",".join(miss_letters)}\n')
-                    file.write(f'Correct Letter Rank: {cor_letter_rank}\n')
+                for (
+                    mod_word,
+                    miss_letters,
+                    orig_word,
+                    top_preds,
+                    cor_letter_rank,
+                ) in predictions:
+                    file.write(
+                        f'Test Word: {mod_word}, Correct Letters: {",".join(miss_letters)}\n'
+                    )
+                    file.write(f"Correct Letter Rank: {cor_letter_rank}\n")
 
-                    for rank, (pred_letter, confidence) in enumerate(top_preds, start=1):
-                        reconstructed_word = mod_word.replace('_', pred_letter)
+                    for rank, (pred_letter, confidence) in enumerate(
+                        top_preds, start=1
+                    ):
+                        reconstructed_word = mod_word.replace("_", pred_letter)
                         is_valid_word = reconstructed_word in self.all_words
 
-                        file.write(f"Rank {rank}: '{pred_letter}' (Confidence: {confidence:.8f}), "
-                                   f"Valid: {is_valid_word}\n")
+                        file.write(
+                            f"Rank {rank}: '{pred_letter}' (Confidence: {confidence:.8f}), "
+                            f"Valid: {is_valid_word}\n"
+                        )
 
-                    file.write('\n')
+                    file.write("\n")
         except Exception as e:
-            logging.error(f"Error saving summary stats to {output_file_path}: {e}", exc_info=True)
+            logging.error(
+                f"Error saving summary stats to {output_file_path}: {e}",
+                exc_info=True,
+            )
 
-    def export_prediction_details_to_csv(self, predictions, prediction_method_name):
+    def export_prediction_details_to_csv(
+        self, predictions, prediction_method_name
+    ):
         """
         Export detailed prediction results to a CSV file for further analysis.
 
@@ -210,41 +315,79 @@ class EvaluateModel:
         """
         split_type_str = f"_{self.split_type}" if self.split_type else ""
         csv_file_path = self.config.csv_dir / (
-            f'{self.corpus_name}_{prediction_method_name}{split_type_str}_split'
-            f'{self.config.split_config}_qrange{self.config.q_range[0]}-'
-            f'{self.config.q_range[1]}_prediction.csv'
+            f"{self.corpus_name}_{prediction_method_name}{split_type_str}_split"
+            f"{self.config.split_config}_qrange{self.config.q_range[0]}-"
+            f"{self.config.q_range[1]}_prediction.csv"
         )
         try:
-            with csv_file_path.open('w', newline='', encoding='utf-8', buffering=1) as file:  # Use buffered writing
+            with csv_file_path.open(
+                "w", newline="", encoding="utf-8", buffering=1
+            ) as file:  # Use buffered writing
                 writer = csv.writer(file)
 
                 # Write CSV header
-                writer.writerow([
-                    'Tested_Word', 'Original_Word', 'Correct_Letters', 
-                    'Top1_Predicted_Letter', 'Top1_Confidence', 'Top1_Is_Valid', 'Top1_Is_Accurate',
-                    'Top2_Predicted_Letter', 'Top2_Confidence', 'Top2_Is_Valid', 'Top2_Is_Accurate',
-                    'Top3_Predicted_Letter', 'Top3_Confidence', 'Top3_Is_Valid', 'Top3_Is_Accurate',
-                    'Correct_Letter_Rank', 'In_Training_Set'
-                ])
+                writer.writerow(
+                    [
+                        "Tested_Word",
+                        "Original_Word",
+                        "Correct_Letters",
+                        "Top1_Predicted_Letter",
+                        "Top1_Confidence",
+                        "Top1_Is_Valid",
+                        "Top1_Is_Accurate",
+                        "Top2_Predicted_Letter",
+                        "Top2_Confidence",
+                        "Top2_Is_Valid",
+                        "Top2_Is_Accurate",
+                        "Top3_Predicted_Letter",
+                        "Top3_Confidence",
+                        "Top3_Is_Valid",
+                        "Top3_Is_Accurate",
+                        "Correct_Letter_Rank",
+                        "In_Training_Set",
+                    ]
+                )
 
                 training_words_set = set(self.train_set)
                 # Process each prediction and write details to CSV in batches
                 rows = []
-                for mod_word, miss_letters, orig_word, top_preds, cor_letter_rank in predictions:
-                    row = [mod_word, orig_word, ','.join(miss_letters)]
+                for (
+                    mod_word,
+                    miss_letters,
+                    orig_word,
+                    top_preds,
+                    cor_letter_rank,
+                ) in predictions:
+                    row = [mod_word, orig_word, ",".join(miss_letters)]
 
                     for predicted_letter, confidence in top_preds:
-                        reconstructed_word = mod_word.replace('_', predicted_letter)
-                        is_valid = 1 if reconstructed_word in self.all_words else 0
-                        is_accurate = 1 if predicted_letter in miss_letters else 0
+                        reconstructed_word = mod_word.replace(
+                            "_", predicted_letter
+                        )
+                        is_valid = (
+                            1 if reconstructed_word in self.all_words else 0
+                        )
+                        is_accurate = (
+                            1 if predicted_letter in miss_letters else 0
+                        )
 
-                        row.extend([predicted_letter, confidence, is_valid, is_accurate])
+                        row.extend(
+                            [
+                                predicted_letter,
+                                confidence,
+                                is_valid,
+                                is_accurate,
+                            ]
+                        )
 
                     row.append(cor_letter_rank)
                     row.append(1 if orig_word in training_words_set else 0)
 
                     rows.append(row)
-                
+
                 writer.writerows(rows)  # Write all rows in a single batch
         except Exception as e:
-            logging.error(f"Error exporting prediction details to CSV {csv_file_path}: {e}", exc_info=True)
+            logging.error(
+                f"Error exporting prediction details to CSV {csv_file_path}: {e}",
+                exc_info=True,
+            )
